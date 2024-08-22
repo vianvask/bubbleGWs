@@ -37,7 +37,7 @@ int main (int argc, char *argv[]) {
     vector<double> tmp(2);
     tmp = averageevolution(Gamma, tmin, Nt, dt, Ft, taut, at, Ht, atau);
     
-    // simulation volume = cube of edge length L
+    // simulation volume = cube of edge length L = horizon radius at t=t_p
     double L = 1.0/tmp[0];
     double x1 = -L/2.0, x2 = L/2.0;
     double lasttau = taut[taut.size()-1][1];
@@ -67,6 +67,7 @@ int main (int argc, char *argv[]) {
                 flag = false;
             }
         }
+        // nucleate the bubble only if it is not inside another bubble
         if (flag) {
             b0.x = xc;
             b0.tau = taun;
@@ -154,7 +155,7 @@ int main (int argc, char *argv[]) {
         }
     }
     
-    // compute u_ij(k) and its time derivative
+    // solve the perturbed Einstein equation
     double a1, a2, H1, H2;
     complex<double> k1, k2, l1, l2;
     for (int jt = 0; jt < Nt-1; jt++) {
