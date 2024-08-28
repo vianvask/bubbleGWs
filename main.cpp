@@ -23,21 +23,24 @@ int main (int argc, char *argv[]) {
     };
     
     // #points of the bubble surfaces
-    int Ns = 4000;
+    int Ns = 2000;
     
     // #timesteps
     const int Nt = 2000;
+    
+    // #k directions
+    int Nkhat = 8;
     
     // max. number of bubbles including nucleation inside other bubbles
     int J = 100;
     
     // determine the time range and simulation volume
-    vector<double> trange = findtrange(Gamma, 0.01, 0.0001, 0.5);
+    vector<double> trange = findtrange(Gamma, 0.01, J, 1.5);
     double tmin = trange[0], tmax = trange[1];
     double dt = (tmax-tmin)/(1.0*Nt);
-    double x1 = trange[2], x2 = trange[3];
-    double L = x2 - x1;
-    
+    double L = trange[2];
+    double x1 = -L/2.0, x2 = L/2.0;
+        
     cout << "time range: (" << tmin << ", " << tmax << ")" << endl;
     cout << "L = " << L << endl;
     
@@ -52,7 +55,7 @@ int main (int argc, char *argv[]) {
     
     bubble b0;
     vector<bubble> bubbles;
-    double tn, taun, tauc, Rc, ac, a, tau, H, R, d, dj;
+    double tn, taun, tauc, Rc, ac, a, tau, H, R, d, kX;
     vector<double> xh(3, 0.0), xc(3, 0.0), X(3, 0.0), F(2, 0.0), F6(6, 0.0);
     
     // generate bubble nucleation times
@@ -96,12 +99,12 @@ int main (int argc, char *argv[]) {
     }
     const int Nk = klist.size();
     
-    // generate points on a unit sphere
-    vector<vector<double> > xhcoll = sphereN(Ns);
-    Ns = xhcoll.size();
+    // generate x and k directions
+    vector<vector<double> > xhat = sphereN(Ns);
+    vector<vector<double> > khat = sphereN(Nkhat);
     
-    // initialize T_ij: Nt timesteps, 3 k directions, Nk k values, 2 approximations, 6 ij components
-    vector<vector<vector<vector<vector<complex<double> > > > > > T(Nt, vector<vector<vector<vector<complex<double> > > > > (3, vector<vector<vector<complex<double> > > > (Nk, vector<vector<complex<double> > > (2, vector<complex<double> > (6, zero)))));
+    // initialize T_ij: Nt timesteps, Nkhat k directions, Nk k values, 2 approximations, 6 ij components
+    vector<vector<vector<vector<vector<complex<double> > > > > > T(Nt, vector<vector<vector<vector<complex<double> > > > > (Nkhat, vector<vector<vector<complex<double> > > > (Nk, vector<vector<complex<double> > > (2, vector<complex<double> > (6, zero)))));
     
     // initialize h_ij and its time derivative in the same way as T_ij
     vector<vector<vector<vector<vector<complex<double> > > > > > u, du;
@@ -121,7 +124,7 @@ int main (int argc, char *argv[]) {
         
         // loop over the points on the sphere
         for (int jp = 0; jp < Ns; jp++) {
-            xh = xhcoll[jp];
+            xh = xhat[jp];
             
             // find when the collision happens in the direction xh
             tauc = findtauc(x1, x2, taun, xh, xc, bubbles, jb, 2.0*taumax);
@@ -167,9 +170,10 @@ int main (int argc, char *argv[]) {
                         F6[5] = F[ja]*xh[2]*xh[2];
                         for (int jk = 0; jk < Nk; jk++) {
                             k = klist[jk];
-                            for (int jd = 0; jd < 3; jd++) {
+                            for (int jd = 0; jd < Nkhat; jd++) {
+                                kX = k*inner(khat[jd],X);
                                 for (int j6 = 0; j6 < 6; j6++) {
-                                    T[jt][jd][jk][ja][j6] += F6[j6]*exp(-I*k*X[jd]);
+                                    T[jt][jd][jk][ja][j6] += F6[j6]*exp(-I*kX);
                                 }
                             }
                         }
@@ -191,7 +195,7 @@ int main (int argc, char *argv[]) {
         
         for (int jk = 0; jk < Nk; jk++) {
             k = klist[jk];
-            for (int jd = 0; jd < 3; jd++) {
+            for (int jd = 0; jd < Nkhat; jd++) {
                 for (int ja = 0; ja < 2; ja++) {
                     for (int j6 = 0; j6 < 6; j6++) {
                         k1 = du[jt][jd][jk][ja][j6];
@@ -208,18 +212,10 @@ int main (int argc, char *argv[]) {
         }
     }
     
-    // unit wavevectors
-    vector<vector<double> > khat(3, vector<double> (3, 0.0));
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-            khat[i][j] = delta(i,j);
-        }
-    }
-    
     // compute the TT projection of u_ij(k) and its time derivative
     for (int jt = 0; jt < Nt; jt++) {
         for (int jk = 0; jk < Nk; jk++) {
-            for (int jd = 0; jd < 3; jd++) {
+            for (int jd = 0; jd < Nkhat; jd++) {
                 for (int ja = 0; ja < 2; ja++) {
                     u[jt][jd][jk][ja] = TTprojection6(u[jt][jd][jk][ja], khat[jd]);
                     du[jt][jd][jk][ja] = TTprojection6(du[jt][jd][jk][ja], khat[jd]);
@@ -228,7 +224,6 @@ int main (int argc, char *argv[]) {
         }
     }
     
-    // output the GW spectrum in the end and the total GW energy density as a function of time
     filename = "OmegaGWbeta" + to_string_prec(beta,2) + "j" + to_string(index) + ".dat";
     ofstream outfileOmega;
     outfileOmega.open(filename.c_str());
@@ -236,13 +231,14 @@ int main (int argc, char *argv[]) {
     ofstream outfileOmegaTot;
     outfileOmegaTot.open(filename.c_str());
     
+    // output the GW spectrum in the end and the total GW energy density as a function of time
     const vector<double> zero2(2,0.0);
     vector<double> Omega(2), OmegaTot(2), k2Pu(2), Pdu(2);
     double Theta;
     for (int jt = 0; jt < Nt; jt++) {
         a = at[jt][1];
         H = Ht[jt][1];
-        Theta = 4.0*PI/3.0*pow(H,-2.0)*3.0*pow(beta,2.0)/(16.0*pow(PI*L,3.0));
+        Theta = 4.0*PI/(1.0*Nkhat)*3.0*pow(beta/H,2.0)/(16.0*pow(PI*L,3.0));
         
         OmegaTot = zero2;
         for (int jk = 0; jk < Nk; jk++) {
@@ -250,13 +246,13 @@ int main (int argc, char *argv[]) {
             Pdu = zero2;
             k2Pu = zero2;
             for (int ja = 0; ja < 2; ja++) {
-                for (int jd = 0; jd < 3; jd++) {
+                for (int jd = 0; jd < Nkhat; jd++) {
                     for (int j6 = 0; j6 < 6; j6++) {
                         Pdu[ja] += (1.0 + ((j6==1) || (j6==2) || (j6==4)))*pow(abs(du[jt][jd][jk][ja][j6]),2.0);
                         k2Pu[ja] += (1.0 + ((j6==1) || (j6==2) || (j6==4)))*pow(k/a*abs(u[jt][jd][jk][ja][j6]),2.0);
                     }
+                    OmegaTot[ja] += 1.0/3.0*pow(k,2.0)*kmin*Theta*(Pdu[ja] + k2Pu[ja]);
                 }
-                OmegaTot[ja] += pow(k,2.0)*kmin*Theta*(Pdu[ja] + k2Pu[ja]);
             }
             if (jt == Nt - 1) {
                 for (int ja = 0; ja < 2; ja++) {
