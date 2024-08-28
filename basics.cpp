@@ -64,6 +64,24 @@ double distance(const vector<double> &X, const vector<double> &Y) {
     return sqrt(d2);
 }
 
+// distance between two points in cubic box with periodic boundaries
+double distance(const vector<double> &X, const vector<double> &Y, double x1, double x2) {
+    double d = distance(X,Y);
+    vector<double> Y2(3);
+    for (int j1 = -1; j1 < 2; j1++) {
+        for (int j2 = -1; j2 < 2; j2++) {
+            for (int j3 = -1; j3 < 2; j3++) {
+                Y2[0] = Y[0] + j1*(x2-x1);
+                Y2[1] = Y[1] + j2*(x2-x1);
+                Y2[2] = Y[2] + j3*(x2-x1);
+                d = min(d,distance(X,Y2));
+            }
+        }
+    }
+    return d;
+}
+
+
 // projection of vector x inside a cube
 vector<double> periodic(double x1, double x2, vector<double> &x) {
     vector<double> y(3);

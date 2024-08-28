@@ -1,6 +1,5 @@
 /*
- g++ -o hPT main.cpp basics.cpp functions.cpp -O3 -std=c++11
- ./hPT 8.0 0.0 0
+ test: ./bubbleGWs 8.0 0.0 0
 */
 
 #include "functions.h"
@@ -61,10 +60,11 @@ int main (int argc, char *argv[]) {
         }
         flag = true;
         for (int jb = 0; jb < bubbles.size(); jb++) {
-            d = distance(xc, bubbles[jb].x);
+            d = distance(xc, bubbles[jb].x, x1, x2);
             R = radius(taun, bubbles[jb].tau);
             if (d < R) {
                 flag = false;
+                jb = bubbles.size();
             }
         }
         // nucleate the bubble only if it is not inside another bubble
@@ -127,11 +127,11 @@ int main (int argc, char *argv[]) {
                                         
                     // 0: envelope, 1: xi = 3
                     if (R < Rc) {
-                        F[0] = 4.0*PI/(3.0*Ns)*pow(a*R,3.0);
-                        F[1] = 4.0*PI/(3.0*Ns)*pow(a*R,3.0);
+                        F[0] = 4.0*PI/(3.0*Ns)*pow(R,3.0);
+                        F[1] = 4.0*PI/(3.0*Ns)*pow(R,3.0);
                     } else {
                         F[0] = 0.0;
-                        F[1] = 4.0*PI/(3.0*Ns)*pow(ac*Rc,3.0)*(ac*Rc)/(a*R);
+                        F[1] = 4.0*PI/(3.0*Ns)*pow(R,3.0)*pow((ac*Rc)/(a*R),4.0);
                     }
                     
                     for (int ja=0; ja<2; ja++) {

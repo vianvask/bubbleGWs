@@ -1,6 +1,6 @@
 #include "functions.h"
 
-// evolution of the Universe on average, returns kmax
+// evolution of the Universe on average, returns (k_max,t_{k_max})
 vector<double> averageevolution(function<double(double)> Gamma, const double tmin, const int jtmax, const double dt, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at, vector<vector<double> > &Ht, vector<vector<double> > &atau) {
     
     // initial state in vacuum dominance:
@@ -57,7 +57,7 @@ vector<double> averageevolution(function<double(double)> Gamma, const double tmi
     return tmp;
 }
 
-// expected number of bubbles in sphere of radius 1/k
+// expected number of bubbles nucleated in sphere of cube [x_1,x_2]^3
 vector<vector<double> > Nbar(function<double(double)> Gamma, const double x1, const double x2, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at) {
     
     const double dt = at[1][0] - at[0][0];
@@ -84,7 +84,7 @@ vector<vector<double> > Nbar(function<double(double)> Gamma, const double x1, co
     return Nt;
 }
 
-// generate times tj for j<J
+// generate times t_j for j<J
 vector<int> jtlist(vector<vector<double> > &Nk, int J, rgen &mt) {
     const double dt = Nk[1][0] - Nk[0][0];
     vector<int> jtlist(J, Nk.size() - 1);
