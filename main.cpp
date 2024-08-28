@@ -1,8 +1,8 @@
 /*
- ./bubbleGWs 8.0 0.0 0 &
- ./bubbleGWs 8.0 0.0 1 &
- ./bubbleGWs 8.0 0.0 2 &
- ./bubbleGWs 8.0 0.0 3
+ ./bubbleGWs 10.0 0.0 0 &
+ ./bubbleGWs 10.0 0.0 1 &
+ ./bubbleGWs 10.0 0.0 2 &
+ ./bubbleGWs 10.0 0.0 3
 */
 
 #include "functions.h"
@@ -23,7 +23,7 @@ int main (int argc, char *argv[]) {
     };
     
     // #points of the bubble surfaces
-    int Ns = 5000;
+    int Ns = 4000;
     
     // #timesteps
     const int Nt = 2000;
@@ -32,7 +32,7 @@ int main (int argc, char *argv[]) {
     int J = 100;
     
     // determine the time range and simulation volume
-    vector<double> trange = findtrange(Gamma, 0.01, 0.0001, 1.0);
+    vector<double> trange = findtrange(Gamma, 0.01, 0.0001, 0.5);
     double tmin = trange[0], tmax = trange[1];
     double dt = (tmax-tmin)/(1.0*Nt);
     double x1 = trange[2], x2 = trange[3];
@@ -241,7 +241,7 @@ int main (int argc, char *argv[]) {
     double Theta;
     for (int jt = 0; jt < Nt; jt++) {
         a = at[jt][1];
-        H = at[jt][1];
+        H = Ht[jt][1];
         Theta = 4.0*PI/3.0*pow(H,-2.0)*3.0*pow(beta,2.0)/(16.0*pow(PI*L,3.0));
         
         OmegaTot = zero2;
