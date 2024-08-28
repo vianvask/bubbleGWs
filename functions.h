@@ -4,6 +4,8 @@ vector<double> averageevolution(function<double(double)> Gamma, const double tmi
 
 vector<vector<double> > Nbar(function<double(double)> Gamma, const double x1, const double x2, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at);
 
+vector<double> findtrange(function<double(double)> Gamma, double Nbarmin, double Fmin, double Lfrac);
+
 vector<int> jtlist(vector<vector<double> > &Nk, int J, rgen &mt);
 
 double findtauc(double x1, double x2, double taun, const vector<double> &xh, const vector<double> &xc, const vector<bubble> &bubbles, int jb, double taumax);

@@ -84,6 +84,44 @@ vector<vector<double> > Nbar(function<double(double)> Gamma, const double x1, co
     return Nt;
 }
 
+// finds the time range where the computation should be performed as well as the simulation boundaries
+vector<double> findtrange(function<double(double)> Gamma, double Nbarmin, double Fmin, double Lfrac) {
+    vector<double> trange(4);
+    
+    vector<vector<double> > Ft, taut, at, Ht, atau;
+    vector<double> tmp(2);
+    
+    int jtmax = 6000;
+    double dt = 0.001;
+        
+    tmp = averageevolution(Gamma, -3.0, jtmax, dt, Ft, taut, at, Ht, atau);
+    double kmax = tmp[0];
+    double L = Lfrac/kmax;
+    double x1 = -L/2.0, x2 = L/2.0;
+
+    vector<vector<double> > Nk = Nbar(Gamma, x1, x2, Ft, taut, at);
+    
+    vector<vector<double> > Nt(jtmax, vector<double> (2,0.0));
+    for (int jt = 0; jt < jtmax; jt++) {
+        Nt[jt][0] = Nk[jt][0];
+        Nt[jt][1] = Nk[jt][1];
+    }
+    
+    vector<vector<double> > Tt(jtmax, vector<double> (2,0.0));
+    for (int jt = 0; jt < jtmax; jt++) {
+        Tt[jt][0] = Ft[jt][0];
+        Tt[jt][1] = 1-Ft[jt][1];
+    }
+    
+    trange[0] = findrootG(Nbarmin, dt, Nt);
+    trange[1] = findrootG(1.0-Fmin, dt, Tt);
+    trange[2] = x1;
+    trange[3] = x2;
+    
+    return trange;
+}
+
+
 // generate times t_j for j<J
 vector<int> jtlist(vector<vector<double> > &Nk, int J, rgen &mt) {
     const double dt = Nk[1][0] - Nk[0][0];

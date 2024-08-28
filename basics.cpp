@@ -123,3 +123,21 @@ double interpolate(double x, vector<vector<double> > &y) {
     }
     return y[n-1][1];
 }
+
+// finds the x for which y(x)=y for a growing function y(x)
+double findrootG(double y, double dx, vector<vector<double> > &list) {
+    int n = list.size();
+    double xmin = list[0][0];
+    double xmax = list[n-1][0];
+    double x = (xmax+xmin)/2.0;
+    while (xmax-xmin > dx) {
+        if (interpolate(x, list) > y) {
+            xmax = x;
+        } else {
+            xmin = x;
+        }
+        x = (xmax+xmin)/2.0;
+    }
+    return x;
+}
+
