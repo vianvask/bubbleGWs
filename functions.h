@@ -4,7 +4,7 @@ vector<double> averageevolution(function<double(double)> Gamma, const double tmi
 
 vector<vector<double> > Nbar(function<double(double)> Gamma, const double x1, const double x2, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at);
 
-vector<double> findtrange(function<double(double)> Gamma, double Nbarmin, double Fmin, double Lfrac);
+vector<double> findtrange(function<double(double)> Gamma, double Nbarmin, int Nb, double tfrac);
 
 vector<int> jtlist(vector<vector<double> > &Nk, int J, rgen &mt);
 

@@ -85,7 +85,7 @@ vector<vector<double> > Nbar(function<double(double)> Gamma, const double x1, co
 }
 
 // finds the time range where the computation should be performed as well as the simulation boundaries
-vector<double> findtrange(function<double(double)> Gamma, double Nbarmin, double Fmin, double Lfrac) {
+vector<double> findtrange(function<double(double)> Gamma, double Nbarmin, int Nb, double tfrac) {
     vector<double> trange(4);
     
     vector<vector<double> > Ft, taut, at, Ht, atau;
@@ -96,31 +96,28 @@ vector<double> findtrange(function<double(double)> Gamma, double Nbarmin, double
         
     tmp = averageevolution(Gamma, -3.0, jtmax, dt, Ft, taut, at, Ht, atau);
     double kmax = tmp[0];
-    double L = Lfrac/kmax;
-    double x1 = -L/2.0, x2 = L/2.0;
+    double tp = tmp[1];
+    vector<vector<double> > Tt(jtmax, vector<double> (2,0.0));
+    for (int jt = 0; jt < jtmax; jt++) {
+        Tt[jt][0] = Ft[jt][0];
+        Tt[jt][1] = 1-Ft[jt][1];
+    }
 
-    vector<vector<double> > Nk = Nbar(Gamma, x1, x2, Ft, taut, at);
-    
+    vector<vector<double> > Nk = Nbar(Gamma, -0.5, 0.5, Ft, taut, at);
     vector<vector<double> > Nt(jtmax, vector<double> (2,0.0));
     for (int jt = 0; jt < jtmax; jt++) {
         Nt[jt][0] = Nk[jt][0];
         Nt[jt][1] = Nk[jt][1];
     }
     
-    vector<vector<double> > Tt(jtmax, vector<double> (2,0.0));
-    for (int jt = 0; jt < jtmax; jt++) {
-        Tt[jt][0] = Ft[jt][0];
-        Tt[jt][1] = 1-Ft[jt][1];
-    }
+    double L = pow(Nb/interpolate(tp, Nt), 1.0/3.0);
     
-    trange[0] = findrootG(Nbarmin, dt, Nt);
-    trange[1] = findrootG(1.0-Fmin, dt, Tt);
-    trange[2] = x1;
-    trange[3] = x2;
+    trange[0] = findrootG(Nbarmin/pow(L,3.0), dt, Nt);
+    trange[1] = tp + tfrac*(tp - findrootG(1.0/pow(L,3.0), dt, Nt));
+    trange[2] = L;
     
     return trange;
 }
-
 
 // generate times t_j for j<J
 vector<int> jtlist(vector<vector<double> > &Nk, int J, rgen &mt) {
