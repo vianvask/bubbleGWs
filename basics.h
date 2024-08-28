@@ -29,6 +29,7 @@ int imod(int i, int n);
 double radius(double tau, double taun);
 double randomreal(double x1, double x2, rgen &mt);
 vector<vector<double> > sphereN(int Ns);
+double inner(const vector<double> &X, const vector<double> &Y);
 double distance(const vector<double> &X, const vector<double> &Y);
 double distance(const vector<double> &X, const vector<double> &Y, double x1, double x2);
 vector<double> periodic(double x1, double x2, vector<double> &x);

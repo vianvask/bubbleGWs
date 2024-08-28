@@ -55,6 +55,15 @@ vector<vector<double> > sphereN(int Ns) {
     return xhcoll;
 }
 
+// inner product
+double inner(const vector<double> &X, const vector<double> &Y) {
+    double res = 0.0;
+    for (int j = 0; j < X.size(); j++) {
+        res += X[j]*Y[j];
+    }
+    return res;
+}
+
 // distance between two points
 double distance(const vector<double> &X, const vector<double> &Y) {
     double d2 = 0.0;
