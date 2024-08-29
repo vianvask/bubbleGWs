@@ -26,16 +26,16 @@ int main (int argc, char *argv[]) {
     int Nn = 10000;
     
     // #points of the bubble surfaces
-    int Ns = 5000;
+    int Ns = 8000;
     
     // #timesteps
-    const int Nt = 1000;
+    const int Nt = 2000;
     
     // simulation volume determined by bar{N}(t=t_p) = J
     int J = 100;
     
     // determine the time range and simulation volume
-    vector<double> trange = findtrange(Gamma, 0.01, J, 2.0);
+    vector<double> trange = findtrange(Gamma, 0.01, J, 1.5);
     double tmin = trange[0], tmax = trange[1];
     double dt = (tmax-tmin)/(1.0*Nt);
     double L = trange[2];
@@ -141,7 +141,7 @@ int main (int argc, char *argv[]) {
                         F[1] = 4.0*PI/(3.0*Ns)*pow(R,3.0);
                     } else {
                         F[0] = 0.0;
-                        F[1] = 4.0*PI/(3.0*Ns)*pow(R,3.0)*pow(Rc/R,4.0)/(1.0+exp(8.0*(t/tc-2.0)));
+                        F[1] = 4.0*PI/(3.0*Ns)*pow(R,3.0)*pow(Rc/R,4.0);
                     }
                     
                     for (int ja = 0; ja < 2; ja++) {
