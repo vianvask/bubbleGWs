@@ -58,7 +58,7 @@ vector<double> averageevolution(function<double(double)> Gamma, const double tmi
 }
 
 // expected number of bubbles nucleated in sphere of cube [x_1,x_2]^3
-vector<vector<double> > Nbar(function<double(double)> Gamma, const double x1, const double x2, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at) {
+vector<vector<double> > Nbar(function<double(double)> Gamma, const double x1, const double x2, const vector<vector<double> > &Ft, const vector<vector<double> > &taut, const vector<vector<double> > &at) {
     
     const double dt = at[1][0] - at[0][0];
     
@@ -85,7 +85,7 @@ vector<vector<double> > Nbar(function<double(double)> Gamma, const double x1, co
 }
 
 // finds the time range where the computation should be performed as well as the simulation boundaries
-vector<double> findtrange(function<double(double)> Gamma, double Nbarmin, int Nb, double tfrac) {
+vector<double> findtrange(function<double(double)> Gamma, const double Nbarmin, const int Nb, const double tfrac) {
     vector<double> trange(4);
     
     vector<vector<double> > Ft, taut, at, Ht, atau;
@@ -119,8 +119,62 @@ vector<double> findtrange(function<double(double)> Gamma, double Nbarmin, int Nb
     return trange;
 }
 
+vector<bubble> nucleate(const double x1, const double x2, const int Nn, const vector<vector<double> > &taut, const vector<vector<double> > &Nb, rgen &mt) {
+    
+    const double dt = taut[1][0] - taut[0][0];
+    
+    // generate list of nucleation sites
+    vector<vector<double> > xlist(Nn, vector<double> (3, 0.0));
+    for (int j = 0; j < Nn; j++) {
+        for (int i = 0; i < 3; i++) {
+            xlist[j][i] = randomreal(x1,x2,mt);
+        }
+    }
+    
+    bubble b0;
+    vector<bubble> bubbles;
+    double taun;
+    vector<double> xc(3, 0.0);
+    
+    // nucleate bubbles
+    int Ntry = 0;
+    const double fV = 1.0/(1.0*Nn);
+    bool flag;
+    for (int jt = 0; jt < taut.size(); jt++) {
+        taun = taut[jt][1];
+        for (int j = 0; j < Nn; j++) {
+            xc = xlist[j];
+            if (fV*dt*Nb[jt][2] > 1.0) {
+                cout << "Warning: too high nucleation probability." << endl;
+            }
+            
+            // try to nucleate a bubble
+            if (fV*dt*Nb[jt][2] > randomreal(0.0,1.0,mt)) {
+                
+                // check if the bubble is inside another bubble
+                flag = true;
+                for (int jb = 0; jb < bubbles.size(); jb++) {
+                    if (distance(xc, bubbles[jb].x, x1, x2) < radius(taun, bubbles[jb].tau)) {
+                        flag = false;
+                        jb = bubbles.size();
+                    }
+                }
+                
+                // nucleate the bubble only if it is not inside another bubble
+                if (flag) {
+                    b0.x = xc;
+                    b0.tau = taun;
+                    bubbles.push_back(b0);
+                }
+            }
+        }
+    }
+    
+    return bubbles;
+}
+
 // finds the conformal time when the bubble that nucleated at xc collided in the direction xh with some other bubble
-double findtauc(double x1, double x2, double taun, const vector<double> &xh, const vector<double> &xc, const vector<bubble> &bubbles, int jb, double taumax) {
+double findtauc(const double x1, const double x2, const double taun, const vector<double> &xh, const vector<double> &xc, const vector<bubble> &bubbles, const int jb, const double taumax) {
     
     double tauc = taumax, taun2, d, ct;
     vector<double> xc2(3), xc3(3);
@@ -170,7 +224,7 @@ double findtauc(double x1, double x2, double taun, const vector<double> &xh, con
     return tauc;
 }
 
-vector<vector<complex<double> > > TTprojection(vector<vector<complex<double> > > &X, vector<double> k) {
+vector<vector<complex<double> > > TTprojection(const vector<vector<complex<double> > > &X, const vector<double> k) {
     vector<vector<complex<double> > > Y(3, vector<complex<double> > (3, zero));
     for (int i=0; i<3; i++) {
         for (int j=0; j<3; j++) {
@@ -184,7 +238,7 @@ vector<vector<complex<double> > > TTprojection(vector<vector<complex<double> > >
     return Y;
 }
 
-vector<complex<double> > TTprojection6(vector<complex<double> > &X, vector<double> k) {
+vector<complex<double> > TTprojection6(const vector<complex<double> > &X, const vector<double> k) {
     vector<vector<complex<double> > > Y(3, vector<complex<double> > (3, zero));
     vector<complex<double> > Z(6, zero);
     

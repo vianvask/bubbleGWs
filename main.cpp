@@ -31,7 +31,7 @@ int main (int argc, char *argv[]) {
     // #timesteps
     const int Nt = 1000;
     
-    // number of bubbles including nucleation inside other bubbles
+    // simulation volume determined by bar{N}(t=t_p) = J
     int J = 100;
     
     // determine the time range and simulation volume
@@ -53,50 +53,12 @@ int main (int argc, char *argv[]) {
     vector<vector<double> > Nb;
     Nb = Nbar(Gamma, x1, x2, Ft, taut, at);
     
-    bubble b0;
-    vector<bubble> bubbles;
-    double tau, taun, tauc, a, ac, H, R, Rc, kX;
-    vector<double> xh(3, 0.0), xc(3, 0.0), X(3, 0.0), F(2, 0.0), F6(6, 0.0);
-    
-    // generate list of nucleation sites
-    vector<vector<double> > xlist(Nn, vector<double> (3, 0.0));
-    for (int j = 0; j < Nn; j++) {
-        for (int i = 0; i < 3; i++) {
-            xlist[j][i] = randomreal(x1,x2,mt);
-        }
-    }
-    
     // nucleate bubbles
-    const double fV = 1.0/(1.0*Nn);
-    bool flag;
-    for (int jt = 0; jt < Nt; jt++) {
-        taun = taut[jt][1];
-        for (int j = 0; j < Nn; j++) {
-            xc = xlist[j];
-            if (fV*dt*Nb[jt][2] > 1.0) {
-                cout << "Warning: too high nucleation probability." << endl;
-            }
-            
-            // try to nucleate a bubble
-            if (fV*dt*Nb[jt][2] > randomreal(0.0,1.0,mt)) {
-                
-                // check if the bubble is inside another bubble
-                flag = true;
-                for (int jb = 0; jb < bubbles.size(); jb++) {
-                    if (distance(xc, bubbles[jb].x, x1, x2) < radius(taun, bubbles[jb].tau)) {
-                        flag = false;
-                        jb = bubbles.size();
-                    }
-                }
-                
-                // nucleate the bubble only if it is not inside another bubble
-                if (flag) {
-                    b0.x = xc;
-                    b0.tau = taun;
-                    bubbles.push_back(b0);
-                }
-            }
-        }
+    vector<bubble> bubbles;
+    int Ntry = 0;
+    while (bubbles.size() < 8 && Ntry < 20) {
+        bubbles = nucleate(x1, x2, Nn, taut, Nb, mt);
+        Ntry++;
     }
     cout << "#bubbles = " << bubbles.size() << endl;
     
@@ -130,7 +92,9 @@ int main (int argc, char *argv[]) {
     string filename = "Bbeta" + to_string_prec(beta,2) + "j" + to_string(index) + ".dat";
     ofstream outfileB;
     outfileB.open(filename.c_str());
-    double theta, phi;
+    
+    double tau, taun, tauc, a, ac, H, R, Rc, kX, theta, phi;
+    vector<double> xc(3, 0.0), xh(3, 0.0), X(3, 0.0), F(2, 0.0), F6(6, 0.0);
 
     // loop over all the bubbles
     for (int jb = 0; jb < bubbles.size(); jb++) {
@@ -201,9 +165,10 @@ int main (int argc, char *argv[]) {
     }
     outfileB.close();
     
-    // solve the perturbed Einstein equation
     double a1, a2, H1, H2;
     complex<double> k1, k2, l1, l2;
+    
+    // solve the perturbed Einstein equation
     for (int jt = 0; jt < Nt-1; jt++) {
         a1 = at[jt][1];
         H1 = Ht[jt][1];
@@ -248,11 +213,12 @@ int main (int argc, char *argv[]) {
     ofstream outfileOmegaTot;
     outfileOmegaTot.open(filename.c_str());
     
-    // output the GW spectrum in the end and the total GW energy density as a function of time
     const vector<double> zero2(2, 0.0);
     const vector<double> j6coef {1.0, 2.0, 2.0, 1.0, 2.0, 1.0};
     vector<double> Omega(2), OmegaTot(2), k2Pu(2), Pdu(2);
     double t, Theta;
+    
+    // output the GW spectrum in the end and the total GW energy density as a function of time
     for (int jt = 0; jt < Nt; jt++) {
         t = at[jt][0];
         a = at[jt][1];
