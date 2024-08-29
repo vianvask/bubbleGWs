@@ -119,27 +119,6 @@ vector<double> findtrange(function<double(double)> Gamma, double Nbarmin, int Nb
     return trange;
 }
 
-// generate times t_j for j<J
-vector<int> jtlist(vector<vector<double> > &Nk, int J, rgen &mt) {
-    const double dt = Nk[1][0] - Nk[0][0];
-    vector<int> jtlist(J, Nk.size() - 1);
-    int j = 0;
-    for (int jt = 0; jt < Nk.size(); jt++) {
-        if (dt*Nk[jt][2] > 1.0) {
-            cout << "Warning: too long nucleation timestep, N = " << Nk[jt][1] << "." << endl;
-        }
-        if (dt*Nk[jt][2] > randomreal(0.0,1.0,mt)) {
-            jtlist[j] = jt;
-            j++;
-        }
-        if (j >= J) {
-            return jtlist;
-        }
-    }
-    cout << "Warning: nucleation finished at j = " << j << "." << endl;
-    return jtlist;
-}
-
 // finds the conformal time when the bubble that nucleated at xc collided in the direction xh with some other bubble
 double findtauc(double x1, double x2, double taun, const vector<double> &xh, const vector<double> &xc, const vector<bubble> &bubbles, int jb, double taumax) {
     

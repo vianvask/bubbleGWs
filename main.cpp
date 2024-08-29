@@ -22,20 +22,20 @@ int main (int argc, char *argv[]) {
         return exp(beta*t - pow(gammapbeta*beta*t,2.0)/2.0);
     };
     
+    // #nucleation sites
+    int Nn = 10000;
+    
     // #points of the bubble surfaces
-    int Ns = 2000;
+    int Ns = 5000;
     
     // #timesteps
-    const int Nt = 2000;
+    const int Nt = 1000;
     
-    // #k directions
-    int Nkhat = 8;
-    
-    // max. number of bubbles including nucleation inside other bubbles
+    // number of bubbles including nucleation inside other bubbles
     int J = 100;
     
     // determine the time range and simulation volume
-    vector<double> trange = findtrange(Gamma, 0.01, J, 1.5);
+    vector<double> trange = findtrange(Gamma, 0.01, J, 2.0);
     double tmin = trange[0], tmax = trange[1];
     double dt = (tmax-tmin)/(1.0*Nt);
     double L = trange[2];
@@ -55,36 +55,47 @@ int main (int argc, char *argv[]) {
     
     bubble b0;
     vector<bubble> bubbles;
-    double tn, taun, tauc, Rc, ac, a, tau, H, R, d, kX;
+    double tau, taun, tauc, a, ac, H, R, Rc, kX;
     vector<double> xh(3, 0.0), xc(3, 0.0), X(3, 0.0), F(2, 0.0), F6(6, 0.0);
     
-    // generate bubble nucleation times
-    vector<int> jtj = jtlist(Nb, J, mt);
-    bool flag;
-    for (int j = 0; j < J; j++) {
-        taun = taut[jtj[j]][1];
-        
-        // generate bubble nucleation centers
+    // generate list of nucleation sites
+    vector<vector<double> > xlist(Nn, vector<double> (3, 0.0));
+    for (int j = 0; j < Nn; j++) {
         for (int i = 0; i < 3; i++) {
-            xc[i] = randomreal(x1,x2,mt);
+            xlist[j][i] = randomreal(x1,x2,mt);
         }
-        
-        // check if the bubble is inside another bubble
-        flag = true;
-        for (int jb = 0; jb < bubbles.size(); jb++) {
-            d = distance(xc, bubbles[jb].x, x1, x2);
-            R = radius(taun, bubbles[jb].tau);
-            if (d < R) {
-                flag = false;
-                jb = bubbles.size();
+    }
+    
+    // nucleate bubbles
+    const double fV = 1.0/(1.0*Nn);
+    bool flag;
+    for (int jt = 0; jt < Nt; jt++) {
+        taun = taut[jt][1];
+        for (int j = 0; j < Nn; j++) {
+            xc = xlist[j];
+            if (fV*dt*Nb[jt][2] > 1.0) {
+                cout << "Warning: too high nucleation probability." << endl;
             }
-        }
-        
-        // nucleate the bubble only if it is not inside another bubble
-        if (flag) {
-            b0.x = xc;
-            b0.tau = taun;
-            bubbles.push_back(b0);
+            
+            // try to nucleate a bubble
+            if (fV*dt*Nb[jt][2] > randomreal(0.0,1.0,mt)) {
+                
+                // check if the bubble is inside another bubble
+                flag = true;
+                for (int jb = 0; jb < bubbles.size(); jb++) {
+                    if (distance(xc, bubbles[jb].x, x1, x2) < radius(taun, bubbles[jb].tau)) {
+                        flag = false;
+                        jb = bubbles.size();
+                    }
+                }
+                
+                // nucleate the bubble only if it is not inside another bubble
+                if (flag) {
+                    b0.x = xc;
+                    b0.tau = taun;
+                    bubbles.push_back(b0);
+                }
+            }
         }
     }
     cout << "#bubbles = " << bubbles.size() << endl;
@@ -101,7 +112,13 @@ int main (int argc, char *argv[]) {
     
     // generate x and k directions
     vector<vector<double> > xhat = sphereN(Ns);
-    vector<vector<double> > khat = sphereN(Nkhat);
+    vector<vector<double> > khat(3, vector<double> (3, 0.0));
+    int Nkhat = khat.size();
+    for (int jd = 0; jd < Nkhat; jd++) {
+        for (int j = 0; j < 3; j++) {
+            khat[jd][j] = delta(jd, j);
+        }
+    }
     
     // initialize T_ij: Nt timesteps, Nkhat k directions, Nk k values, 2 approximations, 6 ij components
     vector<vector<vector<vector<vector<complex<double> > > > > > T(Nt, vector<vector<vector<vector<complex<double> > > > > (Nkhat, vector<vector<vector<complex<double> > > > (Nk, vector<vector<complex<double> > > (2, vector<complex<double> > (6, zero)))));
@@ -158,10 +175,10 @@ int main (int argc, char *argv[]) {
                         F[1] = 4.0*PI/(3.0*Ns)*pow(R,3.0);
                     } else {
                         F[0] = 0.0;
-                        F[1] = 4.0*PI/(3.0*Ns)*pow(R,3.0)*pow((ac*Rc)/(a*R),4.0);
+                        F[1] = 4.0*PI/(3.0*Ns)*pow(R,3.0)*pow(Rc/R,4.0);
                     }
                     
-                    for (int ja=0; ja<2; ja++) {
+                    for (int ja = 0; ja < 2; ja++) {
                         F6[0] = F[ja]*xh[0]*xh[0];
                         F6[1] = F[ja]*xh[0]*xh[1];
                         F6[2] = F[ja]*xh[0]*xh[2];
@@ -232,10 +249,12 @@ int main (int argc, char *argv[]) {
     outfileOmegaTot.open(filename.c_str());
     
     // output the GW spectrum in the end and the total GW energy density as a function of time
-    const vector<double> zero2(2,0.0);
+    const vector<double> zero2(2, 0.0);
+    const vector<double> j6coef {1.0, 2.0, 2.0, 1.0, 2.0, 1.0};
     vector<double> Omega(2), OmegaTot(2), k2Pu(2), Pdu(2);
-    double Theta;
+    double t, Theta;
     for (int jt = 0; jt < Nt; jt++) {
+        t = at[jt][0];
         a = at[jt][1];
         H = Ht[jt][1];
         Theta = 4.0*PI/(1.0*Nkhat)*3.0*pow(beta/H,2.0)/(16.0*pow(PI*L,3.0));
@@ -248,20 +267,20 @@ int main (int argc, char *argv[]) {
             for (int ja = 0; ja < 2; ja++) {
                 for (int jd = 0; jd < Nkhat; jd++) {
                     for (int j6 = 0; j6 < 6; j6++) {
-                        Pdu[ja] += (1.0 + ((j6==1) || (j6==2) || (j6==4)))*pow(abs(du[jt][jd][jk][ja][j6]),2.0);
-                        k2Pu[ja] += (1.0 + ((j6==1) || (j6==2) || (j6==4)))*pow(k/a*abs(u[jt][jd][jk][ja][j6]),2.0);
+                        Pdu[ja] += j6coef[j6]*pow(abs(du[jt][jd][jk][ja][j6]),2.0);
+                        k2Pu[ja] += j6coef[j6]*pow(k/a*abs(u[jt][jd][jk][ja][j6]),2.0);
                     }
                     OmegaTot[ja] += 1.0/3.0*pow(k,2.0)*kmin*Theta*(Pdu[ja] + k2Pu[ja]);
                 }
             }
-            if (jt == Nt - 1) {
+            if ((20*jt)%(Nt-1) == 0) {
                 for (int ja = 0; ja < 2; ja++) {
                     Omega[ja] = pow(k,3.0)*Theta*(Pdu[ja] + k2Pu[ja]);
                 }
-                outfileOmega << k/beta << "    " << Omega[0] << "    " << Omega[1] << endl;
+                outfileOmega << t << "   " << k/beta << "    " << Omega[0] << "    " << Omega[1] << endl;
             }
         }
-        outfileOmegaTot << at[jt][0] << "    " << a << "    " << OmegaTot[0] << "    " << OmegaTot[1] << endl;
+        outfileOmegaTot << t << "    " << a << "    " << OmegaTot[0] << "    " << OmegaTot[1] << endl;
     }
     outfileOmega.close();
     outfileOmegaTot.close();
