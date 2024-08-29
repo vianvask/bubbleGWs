@@ -45,8 +45,8 @@ int main (int argc, char *argv[]) {
     cout << "L = " << L << endl;
     
     // evolution of conformal time, scale factor and Hubble rate
-    vector<vector<double> > Ft, taut, at, Ht, atau;
-    averageevolution(Gamma, tmin, Nt, dt, Ft, taut, at, Ht, atau);
+    vector<vector<double> > Ft, taut, at, Ht, atau, ttau;
+    averageevolution(Gamma, tmin, Nt, dt, Ft, taut, at, Ht, atau, ttau);
     double taumax = taut[taut.size()-1][1];
     
     // evolution of expected number of bubbles, Nbar[jt][N,dN/dt]
@@ -93,7 +93,7 @@ int main (int argc, char *argv[]) {
     ofstream outfileB;
     outfileB.open(filename.c_str());
     
-    double tau, taun, tauc, a, ac, H, R, Rc, kX, theta, phi;
+    double tau, taun, tauc, t, tc, a, ac, H, R, Rc, kX, theta, phi;
     vector<double> xc(3, 0.0), xh(3, 0.0), X(3, 0.0), F(2, 0.0), F6(6, 0.0);
 
     // loop over all the bubbles
@@ -109,6 +109,7 @@ int main (int argc, char *argv[]) {
             
             // find when the collision happens in the direction xh
             tauc = findtauc(x1, x2, taun, xh, xc, bubbles, jb, 2.0*taumax);
+            tc = interpolate(tauc, ttau);
             ac = interpolate(tauc, atau);
             Rc = radius(tauc, taun);
             
@@ -125,6 +126,7 @@ int main (int argc, char *argv[]) {
             // compute the contribution to the stress-energy tensor
             for (int jt = 0; jt < Nt; jt++) {
                 tau = taut[jt][1];
+                t = taut[jt][0];
                 if (tau > taun) {
                     a = at[jt][1];
                     R = radius(tau, taun);
@@ -139,7 +141,7 @@ int main (int argc, char *argv[]) {
                         F[1] = 4.0*PI/(3.0*Ns)*pow(R,3.0);
                     } else {
                         F[0] = 0.0;
-                        F[1] = 4.0*PI/(3.0*Ns)*pow(R,3.0)*pow(Rc/R,4.0);
+                        F[1] = 4.0*PI/(3.0*Ns)*pow(R,3.0)*pow(Rc/R,4.0)/(1.0+exp(8.0*(t/tc-2.0)));
                     }
                     
                     for (int ja = 0; ja < 2; ja++) {
@@ -216,7 +218,7 @@ int main (int argc, char *argv[]) {
     const vector<double> zero2(2, 0.0);
     const vector<double> j6coef {1.0, 2.0, 2.0, 1.0, 2.0, 1.0};
     vector<double> Omega(2), OmegaTot(2), k2Pu(2), Pdu(2);
-    double t, Theta;
+    double Theta;
     
     // output the GW spectrum in the end and the total GW energy density as a function of time
     for (int jt = 0; jt < Nt; jt++) {
@@ -239,7 +241,8 @@ int main (int argc, char *argv[]) {
                     OmegaTot[ja] += 1.0/3.0*pow(k,2.0)*kmin*Theta*(Pdu[ja] + k2Pu[ja]);
                 }
             }
-            if ((20*jt)%(Nt-1) == 0) {
+            
+            if ((20*(jt+1))%Nt == 0) {
                 for (int ja = 0; ja < 2; ja++) {
                     Omega[ja] = pow(k,3.0)*Theta*(Pdu[ja] + k2Pu[ja]);
                 }

@@ -1,7 +1,7 @@
 #include "functions.h"
 
 // evolution of the Universe on average, returns (k_max,t_{k_max})
-vector<double> averageevolution(function<double(double)> Gamma, const double tmin, const int jtmax, const double dt, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at, vector<vector<double> > &Ht, vector<vector<double> > &atau) {
+vector<double> averageevolution(function<double(double)> Gamma, const double tmin, const int jtmax, const double dt, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at, vector<vector<double> > &Ht, vector<vector<double> > &atau, vector<vector<double> > &ttau) {
     
     // initial state in vacuum dominance:
     double t = tmin, a = exp(tmin), tau = 1.0 - exp(-tmin);
@@ -25,6 +25,8 @@ vector<double> averageevolution(function<double(double)> Gamma, const double tmi
         tmp[0] = tau;
         tmp[1] = a;
         atau.push_back(tmp);
+        tmp[1] = t;
+        ttau.push_back(tmp);
         
         //calculate the false vacuum fraction
         Nt = 0.0;
@@ -88,13 +90,13 @@ vector<vector<double> > Nbar(function<double(double)> Gamma, const double x1, co
 vector<double> findtrange(function<double(double)> Gamma, const double Nbarmin, const int Nb, const double tfrac) {
     vector<double> trange(4);
     
-    vector<vector<double> > Ft, taut, at, Ht, atau;
+    vector<vector<double> > Ft, taut, at, Ht, atau, ttau;
     vector<double> tmp(2);
     
     int jtmax = 6000;
     double dt = 0.001;
         
-    tmp = averageevolution(Gamma, -3.0, jtmax, dt, Ft, taut, at, Ht, atau);
+    tmp = averageevolution(Gamma, -3.0, jtmax, dt, Ft, taut, at, Ht, atau, ttau);
     double kmax = tmp[0];
     double tp = tmp[1];
     vector<vector<double> > Tt(jtmax, vector<double> (2,0.0));
@@ -119,8 +121,8 @@ vector<double> findtrange(function<double(double)> Gamma, const double Nbarmin, 
     return trange;
 }
 
+// nucleates bubbles
 vector<bubble> nucleate(const double x1, const double x2, const int Nn, const vector<vector<double> > &taut, const vector<vector<double> > &Nb, rgen &mt) {
-    
     const double dt = taut[1][0] - taut[0][0];
     
     // generate list of nucleation sites
