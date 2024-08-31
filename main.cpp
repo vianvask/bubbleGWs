@@ -23,16 +23,16 @@ int main (int argc, char *argv[]) {
     };
     
     // #nucleation sites
-    int Nn = 10000;
+    int Nn = 100000;
     
     // #points of the bubble surfaces
-    int Ns = 8000;
+    int Ns = 5000;
     
     // #timesteps
-    const int Nt = 2000;
+    const int Nt = 2500;
     
     // simulation volume determined by bar{N}(t=t_p) = J
-    int J = 100;
+    int J = 120;
     
     // determine the time range and simulation volume
     vector<double> trange = findtrange(Gamma, 0.01, J, 1.5);
@@ -113,7 +113,7 @@ int main (int argc, char *argv[]) {
             ac = interpolate(tauc, atau);
             Rc = radius(tauc, taun);
             
-            // output the collision radia of first bubble
+            // output the collision radii of first bubble
             if (jb < 1) {
                 theta = acos(xh[2]);
                 phi = sgn(xh[1]);
@@ -167,29 +167,26 @@ int main (int argc, char *argv[]) {
     }
     outfileB.close();
     
-    double a1, a2, H1, H2;
-    complex<double> k1, k2, l1, l2;
-    
     // solve the perturbed Einstein equation
-    for (int jt = 0; jt < Nt-1; jt++) {
-        a1 = at[jt][1];
-        H1 = Ht[jt][1];
-        a2 = at[jt+1][1];
-        H2 = Ht[jt+1][1];
+    complex<double> u0, up1, um1, du0, T0;
+    for (int jt = 1; jt < Nt-1; jt++) {
+        a = at[jt][1];
+        H = Ht[jt][1];
         
         for (int jk = 0; jk < Nk; jk++) {
             k = klist[jk];
             for (int jd = 0; jd < Nkhat; jd++) {
                 for (int ja = 0; ja < 2; ja++) {
                     for (int j6 = 0; j6 < 6; j6++) {
-                        k1 = du[jt][jd][jk][ja][j6];
-                        l1 = T[jt][jd][jk][ja][j6]/(a1*a1) - 3.0*H1*k1 - pow(k/a1,2.0)*u[jt][jd][jk][ja][j6];
+                        T0 = T[jt][jd][jk][ja][j6];
+                        u0 = u[jt][jd][jk][ja][j6];
+                        um1 = u[jt-1][jd][jk][ja][j6];
                         
-                        k2 = du[jt][jd][jk][ja][j6] + dt*l1;
-                        u[jt+1][jd][jk][ja][j6] = u[jt][jd][jk][ja][j6] + dt*(k1+k2)/2.0;
+                        up1 = (2.0*pow(dt,2.0)*(T0 - pow(k,2.0)*u0) + 2.0*pow(a,2.0)*(2.0*u0 - um1) + 3.0*pow(a,2.0)*dt*H*um1)/(pow(a,2.0)*(2.0 + 3.0*dt*H));
                         
-                        l2 = T[jt+1][jd][jk][ja][j6]/(a2*a2) - 3.0*H2*k2 - pow(k/a2,2.0)*u[jt+1][jd][jk][ja][j6];
-                        du[jt+1][jd][jk][ja][j6] = du[jt][jd][jk][ja][j6] + dt*(l1+l2)/2.0;
+                        u[jt+1][jd][jk][ja][j6] = up1;
+                        du[jt][jd][jk][ja][j6] = (up1-um1)/(2.0*dt);
+                        du[jt+1][jd][jk][ja][j6] = (up1-u0)/dt;
                     }
                 }
             }
@@ -217,7 +214,7 @@ int main (int argc, char *argv[]) {
     
     const vector<double> zero2(2, 0.0);
     const vector<double> j6coef {1.0, 2.0, 2.0, 1.0, 2.0, 1.0};
-    vector<double> Omega(2), OmegaTot(2), k2Pu(2), Pdu(2);
+    vector<double> Omega(2), OmegaTot(2);
     double Theta;
     
     // output the GW spectrum in the end and the total GW energy density as a function of time
@@ -230,22 +227,19 @@ int main (int argc, char *argv[]) {
         OmegaTot = zero2;
         for (int jk = 0; jk < Nk; jk++) {
             k = klist[jk];
-            Pdu = zero2;
-            k2Pu = zero2;
+            Omega = zero2;
             for (int ja = 0; ja < 2; ja++) {
                 for (int jd = 0; jd < Nkhat; jd++) {
                     for (int j6 = 0; j6 < 6; j6++) {
-                        Pdu[ja] += j6coef[j6]*pow(abs(du[jt][jd][jk][ja][j6]),2.0);
-                        k2Pu[ja] += j6coef[j6]*pow(k/a*abs(u[jt][jd][jk][ja][j6]),2.0);
+                        u0 = u[jt][jd][jk][ja][j6];
+                        du0 = du[jt][jd][jk][ja][j6];
+                        Omega[ja] += pow(k,3.0)*Theta*j6coef[j6]*(pow(abs(du0),2.0) + pow(abs(k*u0/a),2.0));
                     }
-                    OmegaTot[ja] += 1.0/3.0*pow(k,2.0)*kmin*Theta*(Pdu[ja] + k2Pu[ja]);
+                    OmegaTot[ja] += kmin/(3.0*k)*Omega[ja];
                 }
             }
             
             if ((20*(jt+1))%Nt == 0) {
-                for (int ja = 0; ja < 2; ja++) {
-                    Omega[ja] = pow(k,3.0)*Theta*(Pdu[ja] + k2Pu[ja]);
-                }
                 outfileOmega << t << "   " << k/beta << "    " << Omega[0] << "    " << Omega[1] << endl;
             }
         }
@@ -253,6 +247,29 @@ int main (int argc, char *argv[]) {
     }
     outfileOmega.close();
     outfileOmegaTot.close();
+    
+    filename = "OmegaGWfinbeta" + to_string_prec(beta,2) + "j" + to_string(index) + ".dat";
+    ofstream outfileOmegafin;
+    outfileOmegafin.open(filename.c_str());
+    
+    a = at[Nt-1][1];
+    H = Ht[Nt-1][1];
+    Theta = 4.0*PI/(1.0*Nkhat)*3.0*pow(beta/H,2.0)/(16.0*pow(PI*L,3.0));
+    for (int jk = 0; jk < Nk; jk++) {
+        k = klist[jk];
+        Omega = zero2;
+        for (int ja = 0; ja < 2; ja++) {
+            for (int jd = 0; jd < Nkhat; jd++) {
+                for (int j6 = 0; j6 < 6; j6++) {
+                    u0 = u[Nt-1][jd][jk][ja][j6];
+                    du0 = du[Nt-1][jd][jk][ja][j6];
+                    Omega[ja] += pow(k,3.0)*Theta*j6coef[j6]*(pow(abs(du0 + H*u0),2.0) + pow(abs(k*u0/a),2.0));
+                }
+            }
+        }
+        outfileOmegafin << t << "   " << k/beta << "    " << Omega[0] << "    " << Omega[1] << endl;
+    }
+    outfileOmegafin.close();
     
     time_req = clock() - time_req;
     cout << "total evaluation time: " << ((double) time_req/CLOCKS_PER_SEC/60.0) << " minutes." << endl;
