@@ -226,13 +226,14 @@ double findtauc(const double x1, const double x2, const double taun, const vecto
     return tauc;
 }
 
-vector<vector<complex<double> > > TTprojection(const vector<vector<complex<double> > > &X, const vector<double> k) {
+vector<vector<complex<double> > > TTprojection(const vector<vector<complex<double> > > &X, const vector<double> khat) {
     vector<vector<complex<double> > > Y(3, vector<complex<double> > (3, zero));
     for (int i=0; i<3; i++) {
         for (int j=0; j<3; j++) {
+            // sum over l and m
             for (int l=0; l<3; l++) {
                 for (int m=0; m<3; m++) {
-                    Y[i][j] += (1.0*delta(i,l)*delta(j,m) - 2.0*delta(i,l)*k[j]*k[m] + 0.5*delta(i,j)*k[l]*k[m] + 0.5*delta(l,m)*k[i]*k[j] - 0.5*delta(i,j)*delta(l,m) + 0.5*k[i]*k[j]*k[l]*k[m])*X[l][m];
+                    Y[i][j] += (1.0*delta(i,l)*delta(j,m) - 2.0*delta(i,l)*khat[j]*khat[m] + 0.5*delta(i,j)*khat[l]*khat[m] + 0.5*delta(l,m)*khat[i]*khat[j] - 0.5*delta(i,j)*delta(l,m) + 0.5*khat[i]*khat[j]*khat[l]*khat[m])*X[l][m];
                 }
             }
         }
@@ -240,7 +241,7 @@ vector<vector<complex<double> > > TTprojection(const vector<vector<complex<doubl
     return Y;
 }
 
-vector<complex<double> > TTprojection6(const vector<complex<double> > &X, const vector<double> k) {
+vector<complex<double> > TTprojection6(const vector<complex<double> > &X, const vector<double> khat) {
     vector<vector<complex<double> > > Y(3, vector<complex<double> > (3, zero));
     vector<complex<double> > Z(6, zero);
     
@@ -255,7 +256,7 @@ vector<complex<double> > TTprojection6(const vector<complex<double> > &X, const 
     Y[2][0] = Y[0][2];
     Y[2][1] = Y[1][2];
 
-    Y = TTprojection(Y, k);
+    Y = TTprojection(Y, khat);
     
     Z[0] = Y[0][0];
     Z[1] = Y[0][1];

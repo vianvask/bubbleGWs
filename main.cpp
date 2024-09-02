@@ -23,7 +23,7 @@ int main (int argc, char *argv[]) {
     };
     
     // #nucleation sites
-    int Nn = 100000;
+    int Nn = 50000;
     
     // #points of the bubble surfaces
     int Ns = 5000;
@@ -66,7 +66,7 @@ int main (int argc, char *argv[]) {
     const double kmin = 1.0/(2.0*L);
     double k = kmin;
     vector<double> klist;
-    while (k < 100.1*kmin) {
+    while (k < 200.1*kmin) {
         klist.push_back(k);
         k += kmin;
     }
@@ -133,7 +133,7 @@ int main (int argc, char *argv[]) {
                     for (int j=0; j<3; j++) {
                         X[j] = xc[j] + R*xh[j];
                     }
-                    X = periodic(x1, x2, X);
+                    //X = periodic(x1, x2, X);
                                         
                     // 0: envelope, 1: xi = 3
                     if (R < Rc) {
@@ -168,7 +168,7 @@ int main (int argc, char *argv[]) {
     outfileB.close();
     
     // solve the perturbed Einstein equation
-    complex<double> u0, up1, um1, du0, T0;
+    complex<double> u0, um1, du0, T0;
     for (int jt = 1; jt < Nt-1; jt++) {
         a = at[jt][1];
         H = Ht[jt][1];
@@ -182,11 +182,7 @@ int main (int argc, char *argv[]) {
                         u0 = u[jt][jd][jk][ja][j6];
                         um1 = u[jt-1][jd][jk][ja][j6];
                         
-                        up1 = (2.0*pow(dt,2.0)*(T0 - pow(k,2.0)*u0) + 2.0*pow(a,2.0)*(2.0*u0 - um1) + 3.0*pow(a,2.0)*dt*H*um1)/(pow(a,2.0)*(2.0 + 3.0*dt*H));
-                        
-                        u[jt+1][jd][jk][ja][j6] = up1;
-                        du[jt][jd][jk][ja][j6] = (up1-um1)/(2.0*dt);
-                        du[jt+1][jd][jk][ja][j6] = (up1-u0)/dt;
+                        u[jt+1][jd][jk][ja][j6] = (2.0*pow(dt,2.0)*(T0 - pow(k,2.0)*u0) + 2.0*pow(a,2.0)*(2.0*u0 - um1) + 3.0*pow(a,2.0)*dt*H*um1)/(pow(a,2.0)*(2.0 + 3.0*dt*H));
                     }
                 }
             }
@@ -194,12 +190,15 @@ int main (int argc, char *argv[]) {
     }
     
     // compute the TT projection of u_ij(k) and its time derivative
-    for (int jt = 0; jt < Nt; jt++) {
+    for (int jt = 1; jt < Nt; jt++) {
         for (int jk = 0; jk < Nk; jk++) {
             for (int jd = 0; jd < Nkhat; jd++) {
                 for (int ja = 0; ja < 2; ja++) {
                     u[jt][jd][jk][ja] = TTprojection6(u[jt][jd][jk][ja], khat[jd]);
-                    du[jt][jd][jk][ja] = TTprojection6(du[jt][jd][jk][ja], khat[jd]);
+                    
+                    for (int j6 = 0; j6 < 6; j6++) {
+                        du[jt][jd][jk][ja][j6] = (u[jt][jd][jk][ja][j6] - u[jt-1][jd][jk][ja][j6])/dt;
+                    }
                 }
             }
         }
@@ -231,9 +230,8 @@ int main (int argc, char *argv[]) {
             for (int ja = 0; ja < 2; ja++) {
                 for (int jd = 0; jd < Nkhat; jd++) {
                     for (int j6 = 0; j6 < 6; j6++) {
-                        u0 = u[jt][jd][jk][ja][j6];
                         du0 = du[jt][jd][jk][ja][j6];
-                        Omega[ja] += pow(k,3.0)*Theta*j6coef[j6]*(pow(abs(du0),2.0) + pow(abs(k*u0/a),2.0));
+                        Omega[ja] += pow(k,3.0)*Theta*j6coef[j6]*pow(abs(du0),2.0);
                     }
                     OmegaTot[ja] += kmin/(3.0*k)*Omega[ja];
                 }
@@ -263,7 +261,7 @@ int main (int argc, char *argv[]) {
                 for (int j6 = 0; j6 < 6; j6++) {
                     u0 = u[Nt-1][jd][jk][ja][j6];
                     du0 = du[Nt-1][jd][jk][ja][j6];
-                    Omega[ja] += pow(k,3.0)*Theta*j6coef[j6]*(pow(abs(du0 + H*u0),2.0) + pow(abs(k*u0/a),2.0));
+                    Omega[ja] += pow(k,3.0)*Theta*j6coef[j6]*0.5*(pow(abs(du0 + H*u0),2.0) + pow(abs(k*u0/a),2.0));
                 }
             }
         }
