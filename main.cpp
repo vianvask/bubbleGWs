@@ -23,16 +23,19 @@ int main (int argc, char *argv[]) {
     };
     
     // #nucleation sites
-    int Nn = 50000;
+    int Nn = 100000;
     
     // #points of the bubble surfaces
-    int Ns = 5000;
+    int Ns = 10000;
     
     // #timesteps
-    const int Nt = 2500;
+    const int Nt = 5000;
     
     // simulation volume determined by bar{N}(t=t_p) = J
-    int J = 120;
+    int J = 140;
+    
+    // largest GW wavenumber, Nk = k_max/k_min = #k values
+    const int Nk = 240;
     
     // determine the time range and simulation volume
     vector<double> trange = findtrange(Gamma, 0.01, J, 1.5);
@@ -66,11 +69,10 @@ int main (int argc, char *argv[]) {
     const double kmin = 1.0/(2.0*L);
     double k = kmin;
     vector<double> klist;
-    while (k < 200.1*kmin) {
+    while (k < (Nk + 0.1)*kmin) {
         klist.push_back(k);
         k += kmin;
     }
-    const int Nk = klist.size();
     
     // generate x and k directions
     vector<vector<double> > xhat = sphereN(Ns);
@@ -86,8 +88,7 @@ int main (int argc, char *argv[]) {
     vector<vector<vector<vector<vector<complex<double> > > > > > T(Nt, vector<vector<vector<vector<complex<double> > > > > (Nkhat, vector<vector<vector<complex<double> > > > (Nk, vector<vector<complex<double> > > (2, vector<complex<double> > (6, zero)))));
     
     // initialize h_ij and its time derivative in the same way as T_ij
-    vector<vector<vector<vector<vector<complex<double> > > > > > u, du;
-    u = T; du = T;
+    vector<vector<vector<vector<vector<complex<double> > > > > > u = T, du = T;
     
     string filename = "Bbeta" + to_string_prec(beta,2) + "j" + to_string(index) + ".dat";
     ofstream outfileB;
@@ -151,6 +152,7 @@ int main (int argc, char *argv[]) {
                         F6[3] = F[ja]*xh[1]*xh[1];
                         F6[4] = F[ja]*xh[1]*xh[2];
                         F6[5] = F[ja]*xh[2]*xh[2];
+                        
                         for (int jk = 0; jk < Nk; jk++) {
                             k = klist[jk];
                             for (int jd = 0; jd < Nkhat; jd++) {
