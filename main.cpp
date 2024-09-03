@@ -25,7 +25,7 @@ int main (int argc, char *argv[]) {
     // #nucleation sites
     int Nn = 100000;
     
-    // #points of the bubble surfaces
+    // #points on the bubble surfaces
     int Ns = 10000;
     
     // #timesteps
@@ -90,7 +90,7 @@ int main (int argc, char *argv[]) {
     // initialize h_ij and its time derivative in the same way as T_ij
     vector<vector<vector<vector<vector<complex<double> > > > > > u = T, du = T;
     
-    string filename = "Bbeta" + to_string_prec(beta,2) + "j" + to_string(index) + ".dat";
+    string filename = "B_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(beta,2) + "_j_" + to_string(index) + ".dat";
     ofstream outfileB;
     outfileB.open(filename.c_str());
     
@@ -206,10 +206,10 @@ int main (int argc, char *argv[]) {
         }
     }
     
-    filename = "OmegaGWbeta" + to_string_prec(beta,2) + "j" + to_string(index) + ".dat";
+    filename = "OmegaGW_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(beta,2) + "_j_" + to_string(index) + ".dat";
     ofstream outfileOmega;
     outfileOmega.open(filename.c_str());
-    filename = "OmegaTotGWbeta" + to_string_prec(beta,2) + "j" + to_string(index) + ".dat";
+    filename = "OmegaTotGW_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(beta,2) + "_j_" + to_string(index) + ".dat";
     ofstream outfileOmegaTot;
     outfileOmegaTot.open(filename.c_str());
     
@@ -248,7 +248,7 @@ int main (int argc, char *argv[]) {
     outfileOmega.close();
     outfileOmegaTot.close();
     
-    filename = "OmegaGWfinbeta" + to_string_prec(beta,2) + "j" + to_string(index) + ".dat";
+    filename = "OmegaGWfin_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(beta,2) + "_j_" + to_string(index) + ".dat";
     ofstream outfileOmegafin;
     outfileOmegafin.open(filename.c_str());
     
