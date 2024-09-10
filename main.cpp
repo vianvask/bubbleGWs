@@ -26,10 +26,10 @@ int main (int argc, char *argv[]) {
     int Nn = 100000;
     
     // #points on the bubble surfaces
-    int Ns = 10000;
+    int Ns = 20000;
     
     // #timesteps
-    const int Nt = 5000;
+    const int Nt = 10000;
     
     // simulation volume determined by bar{N}(t=t_p) = J
     int J = 140;
@@ -59,8 +59,9 @@ int main (int argc, char *argv[]) {
     // nucleate bubbles
     vector<bubble> bubbles;
     int Ntry = 0;
-    while (bubbles.size() < 8 && Ntry < 20) {
+    while ((bubbles.size() < 10 || bubbles.size() > J) && Ntry < 100) {
         bubbles = nucleate(x1, x2, Nn, taut, Nb, mt);
+        cout << bubbles.size() << endl;
         Ntry++;
     }
     cout << "#bubbles = " << bubbles.size() << endl;
@@ -267,7 +268,7 @@ int main (int argc, char *argv[]) {
                 }
             }
         }
-        outfileOmegafin << t << "   " << k/beta << "    " << Omega[0] << "    " << Omega[1] << endl;
+        outfileOmegafin << k/beta << "    " << Omega[0] << "    " << Omega[1] << endl;
     }
     outfileOmegafin.close();
     
