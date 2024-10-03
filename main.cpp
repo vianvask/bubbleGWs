@@ -62,6 +62,7 @@ int main (int argc, char *argv[]) {
     cout << "#bubbles = " << bubbles.size() << endl;
     
     // evolution of conformal time, scale factor and Hubble rate with larger dt
+    Ft.clear(); taut.clear(); at.clear(); Ht.clear(); atau.clear(); ttau.clear();
     averageevolution(Gamma, tmin, Nt, dt, Ft, taut, at, Ht, atau, ttau);
     double taumax = taut[taut.size()-1][1];
     
