@@ -1,10 +1,3 @@
-/*
- ./bubbleGWs 10.0 0.0 0 &
- ./bubbleGWs 10.0 0.0 1 &
- ./bubbleGWs 10.0 0.0 2 &
- ./bubbleGWs 10.0 0.0 3
-*/
-
 #include "functions.h"
 
 int main (int argc, char *argv[]) {
@@ -13,7 +6,7 @@ int main (int argc, char *argv[]) {
     const double gammapbeta = atof(argv[2]);
     const int index = atoi(argv[3]);
     
-    cout << setprecision(4) << fixed;
+    cout << setprecision(5) << fixed;
     clock_t time_req = clock(); // timing
     rgen mt(time(NULL)*(index+1)/beta); // random number generator
 
@@ -29,7 +22,7 @@ int main (int argc, char *argv[]) {
     int Ns = 20000;
     
     // #timesteps
-    const int Nt = 10000;
+    const int Nt = 20000;
     
     // simulation volume determined by bar{N}(t=t_p) = J
     int J = 140;
@@ -38,13 +31,14 @@ int main (int argc, char *argv[]) {
     const int Nk = 240;
     
     // determine the time range and simulation volume
-    vector<double> trange = findtrange(Gamma, 0.01, J, 1.5);
+    vector<double> trange = findtrange(Gamma, 0.01, J, 6.0);
     double tmin = trange[0], tmax = trange[1];
     double dt = (tmax-tmin)/(1.0*Nt);
     double L = trange[2];
     double x1 = -L/2.0, x2 = L/2.0;
         
     cout << "time range: (" << tmin << ", " << tmax << ")" << endl;
+    cout << "dt = " << dt << endl;
     cout << "L = " << L << endl;
     
     // evolution of conformal time, scale factor and Hubble rate
@@ -85,8 +79,9 @@ int main (int argc, char *argv[]) {
         }
     }
     
-    // initialize T_ij: Nt timesteps, Nkhat k directions, Nk k values, 2 approximations, 6 ij components
-    vector<vector<vector<vector<vector<complex<double> > > > > > T(Nt, vector<vector<vector<vector<complex<double> > > > > (Nkhat, vector<vector<vector<complex<double> > > > (Nk, vector<vector<complex<double> > > (2, vector<complex<double> > (6, zero)))));
+    // initialize T_ij: Nt timesteps, Nkhat k directions, Nk k values, 3 approximations, 6 ij components
+    int Na = 3;
+    vector<vector<vector<vector<vector<complex<double> > > > > > T(Nt, vector<vector<vector<vector<complex<double> > > > > (Nkhat, vector<vector<vector<complex<double> > > > (Nk, vector<vector<complex<double> > > (Na, vector<complex<double> > (6, zero)))));
     
     // initialize h_ij and its time derivative in the same way as T_ij
     vector<vector<vector<vector<vector<complex<double> > > > > > u = T, du = T;
@@ -141,12 +136,14 @@ int main (int argc, char *argv[]) {
                     if (R < Rc) {
                         F[0] = 4.0*PI/(3.0*Ns)*pow(R,3.0);
                         F[1] = 4.0*PI/(3.0*Ns)*pow(R,3.0);
+                        F[2] = 4.0*PI/(3.0*Ns)*pow(R,3.0);
                     } else {
                         F[0] = 0.0;
-                        F[1] = 4.0*PI/(3.0*Ns)*pow(R,3.0)*pow(Rc/R,4.0);
+                        F[1] = 4.0*PI/(3.0*Ns)*pow(R,3.0)*pow(Rc/R,3.0);
+                        F[2] = 4.0*PI/(3.0*Ns)*pow(R,3.0)*pow(Rc/R,4.0);
                     }
                     
-                    for (int ja = 0; ja < 2; ja++) {
+                    for (int ja = 0; ja < Na; ja++) {
                         F6[0] = F[ja]*xh[0]*xh[0];
                         F6[1] = F[ja]*xh[0]*xh[1];
                         F6[2] = F[ja]*xh[0]*xh[2];
@@ -179,7 +176,7 @@ int main (int argc, char *argv[]) {
         for (int jk = 0; jk < Nk; jk++) {
             k = klist[jk];
             for (int jd = 0; jd < Nkhat; jd++) {
-                for (int ja = 0; ja < 2; ja++) {
+                for (int ja = 0; ja < Na; ja++) {
                     for (int j6 = 0; j6 < 6; j6++) {
                         T0 = T[jt][jd][jk][ja][j6];
                         u0 = u[jt][jd][jk][ja][j6];
@@ -196,7 +193,7 @@ int main (int argc, char *argv[]) {
     for (int jt = 1; jt < Nt; jt++) {
         for (int jk = 0; jk < Nk; jk++) {
             for (int jd = 0; jd < Nkhat; jd++) {
-                for (int ja = 0; ja < 2; ja++) {
+                for (int ja = 0; ja < Na; ja++) {
                     u[jt][jd][jk][ja] = TTprojection6(u[jt][jd][jk][ja], khat[jd]);
                     
                     for (int j6 = 0; j6 < 6; j6++) {
@@ -216,7 +213,7 @@ int main (int argc, char *argv[]) {
     
     const vector<double> zero2(2, 0.0);
     const vector<double> j6coef {1.0, 2.0, 2.0, 1.0, 2.0, 1.0};
-    vector<double> Omega(2), OmegaTot(2);
+    vector<double> Omega(Na), OmegaTot(Na);
     double Theta;
     
     // output the GW spectrum in the end and the total GW energy density as a function of time
@@ -230,7 +227,7 @@ int main (int argc, char *argv[]) {
         for (int jk = 0; jk < Nk; jk++) {
             k = klist[jk];
             Omega = zero2;
-            for (int ja = 0; ja < 2; ja++) {
+            for (int ja = 0; ja < Na; ja++) {
                 for (int jd = 0; jd < Nkhat; jd++) {
                     for (int j6 = 0; j6 < 6; j6++) {
                         du0 = du[jt][jd][jk][ja][j6];
@@ -241,10 +238,10 @@ int main (int argc, char *argv[]) {
             }
             
             if ((20*(jt+1))%Nt == 0) {
-                outfileOmega << t << "   " << k/beta << "    " << Omega[0] << "    " << Omega[1] << endl;
+                outfileOmega << t << "   " << k/beta << "    " << Omega[0] << "    " << Omega[1] << "    " << Omega[2] << endl;
             }
         }
-        outfileOmegaTot << t << "    " << a << "    " << OmegaTot[0] << "    " << OmegaTot[1] << endl;
+        outfileOmegaTot << t << "    " << a << "    " << OmegaTot[0] << "    " << OmegaTot[1] << "    " << OmegaTot[2] << endl;
     }
     outfileOmega.close();
     outfileOmegaTot.close();
@@ -259,7 +256,7 @@ int main (int argc, char *argv[]) {
     for (int jk = 0; jk < Nk; jk++) {
         k = klist[jk];
         Omega = zero2;
-        for (int ja = 0; ja < 2; ja++) {
+        for (int ja = 0; ja < Na; ja++) {
             for (int jd = 0; jd < Nkhat; jd++) {
                 for (int j6 = 0; j6 < 6; j6++) {
                     u0 = u[Nt-1][jd][jk][ja][j6];
@@ -268,7 +265,7 @@ int main (int argc, char *argv[]) {
                 }
             }
         }
-        outfileOmegafin << k/beta << "    " << Omega[0] << "    " << Omega[1] << endl;
+        outfileOmegafin << k/beta << "    " << Omega[0] << "    " << Omega[1] << "    " << Omega[2] << endl;
     }
     outfileOmegafin.close();
     
