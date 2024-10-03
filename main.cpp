@@ -22,7 +22,7 @@ int main (int argc, char *argv[]) {
     int Ns = 20000;
     
     // #timesteps
-    const int Nt = 20000;
+    const int Nt = 10000;
     
     // simulation volume determined by bar{N}(t=t_p) = J
     int J = 140;
@@ -31,23 +31,24 @@ int main (int argc, char *argv[]) {
     const int Nk = 240;
     
     // determine the time range and simulation volume
-    vector<double> trange = findtrange(Gamma, 0.01, J, 6.0);
-    double tmin = trange[0], tmax = trange[1];
+    vector<double> trange = findtrange(Gamma, 0.01, J, 6.0, 0.001);
+    double tmin = trange[0];
+    double tmax = trange[1];
     double dt = (tmax-tmin)/(1.0*Nt);
     double L = trange[2];
     double x1 = -L/2.0, x2 = L/2.0;
-        
+    
     cout << "time range: (" << tmin << ", " << tmax << ")" << endl;
     cout << "dt = " << dt << endl;
     cout << "L = " << L << endl;
     
-    // evolution of conformal time, scale factor and Hubble rate
-    vector<vector<double> > Ft, taut, at, Ht, atau, ttau;
-    averageevolution(Gamma, tmin, Nt, dt, Ft, taut, at, Ht, atau, ttau);
-    double taumax = taut[taut.size()-1][1];
+    double tmaxnuc = min(trange[3],tmax);
+    double dtnuc = (tmaxnuc-tmin)/(1.0*Nt);
     
-    // evolution of expected number of bubbles, Nbar[jt][N,dN/dt]
-    vector<vector<double> > Nb;
+    vector<vector<double> > Ft, taut, at, Ht, atau, ttau, Nb;
+    
+    // evolution of conformal time, scale factor, Hubble rate and expected number of bubbles, Nbar[jt][N,dN/dt]
+    averageevolution(Gamma, tmin, Nt, dtnuc, Ft, taut, at, Ht, atau, ttau);
     Nb = Nbar(Gamma, x1, x2, Ft, taut, at);
     
     // nucleate bubbles
@@ -59,6 +60,10 @@ int main (int argc, char *argv[]) {
         Ntry++;
     }
     cout << "#bubbles = " << bubbles.size() << endl;
+    
+    // evolution of conformal time, scale factor and Hubble rate with larger dt
+    averageevolution(Gamma, tmin, Nt, dt, Ft, taut, at, Ht, atau, ttau);
+    double taumax = taut[taut.size()-1][1];
     
     // generate a list of k values
     const double kmin = 1.0/(2.0*L);

@@ -87,7 +87,7 @@ vector<vector<double> > Nbar(function<double(double)> Gamma, const double x1, co
 }
 
 // finds the time range where the computation should be performed as well as the simulation boundaries
-vector<double> findtrange(function<double(double)> Gamma, const double Nbarmin, const int Nb, const double tfrac) {
+vector<double> findtrange(function<double(double)> Gamma, const double Nbarmin, const int Nb, const double tfrac, const double Fmin) {
     vector<double> trange(4);
     
     vector<vector<double> > Ft, taut, at, Ht, atau, ttau;
@@ -117,6 +117,7 @@ vector<double> findtrange(function<double(double)> Gamma, const double Nbarmin, 
     trange[0] = findrootG(Nbarmin/pow(L,3.0), dt, Nt);
     trange[1] = tp + tfrac*(tp - findrootG(1.0/pow(L,3.0), dt, Nt));
     trange[2] = L;
+    trange[3] = findrootG(1.0-Fmin, dt, Tt);
     
     return trange;
 }

@@ -4,7 +4,7 @@ vector<double> averageevolution(function<double(double)> Gamma, const double tmi
 
 vector<vector<double> > Nbar(function<double(double)> Gamma, const double x1, const double x2, const vector<vector<double> > &Ft, const vector<vector<double> > &taut, const vector<vector<double> > &at);
 
-vector<double> findtrange(function<double(double)> Gamma, const double Nbarmin, const int Nb, const double tfrac);
+vector<double> findtrange(function<double(double)> Gamma, const double Nbarmin, const int Nb, const double tfrac, const double Fmin);
 
 vector<bubble> nucleate(const double x1, const double x2, const int Nn, const vector<vector<double> > &taut, const vector<vector<double> > &Nb, rgen &mt);
 
