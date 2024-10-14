@@ -217,7 +217,7 @@ int main (int argc, char *argv[]) {
     ofstream outfileOmegaTot;
     outfileOmegaTot.open(filename.c_str());
     
-    const vector<double> zero2(2, 0.0);
+    const vector<double> zeroNa(Na, 0.0);
     const vector<double> j6coef {1.0, 2.0, 2.0, 1.0, 2.0, 1.0};
     vector<double> Omega(Na), OmegaTot(Na);
     double Theta;
@@ -229,10 +229,10 @@ int main (int argc, char *argv[]) {
         H = Ht[jt][1];
         Theta = 4.0*PI/(1.0*Nkhat)*3.0*pow(beta/H,2.0)/(16.0*pow(PI*L,3.0));
         
-        OmegaTot = zero2;
+        OmegaTot = zeroNa;
         for (int jk = 0; jk < Nk; jk++) {
             k = klist[jk];
-            Omega = zero2;
+            Omega = zeroNa;
             for (int ja = 0; ja < Na; ja++) {
                 for (int jd = 0; jd < Nkhat; jd++) {
                     for (int j6 = 0; j6 < 6; j6++) {
@@ -261,7 +261,7 @@ int main (int argc, char *argv[]) {
     Theta = 4.0*PI/(1.0*Nkhat)*3.0*pow(beta/H,2.0)/(16.0*pow(PI*L,3.0));
     for (int jk = 0; jk < Nk; jk++) {
         k = klist[jk];
-        Omega = zero2;
+        Omega = zeroNa;
         for (int ja = 0; ja < Na; ja++) {
             for (int jd = 0; jd < Nkhat; jd++) {
                 for (int j6 = 0; j6 < 6; j6++) {
