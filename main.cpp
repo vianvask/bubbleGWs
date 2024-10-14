@@ -97,7 +97,7 @@ int main (int argc, char *argv[]) {
     outfileB.open(filename.c_str());
     
     double tau, taun, tauc, t, tc, a, ac, H, R, Rc, kX, theta, phi;
-    vector<double> xc(3, 0.0), xh(3, 0.0), X(3, 0.0), F(2, 0.0), F6(6, 0.0);
+    vector<double> xc(3, 0.0), xh(3, 0.0), X(3, 0.0), F(Na, 0.0), F6(6, 0.0);
 
     // loop over all the bubbles
     for (int jb = 0; jb < bubbles.size(); jb++) {
@@ -138,7 +138,7 @@ int main (int argc, char *argv[]) {
                     }
                     //X = periodic(x1, x2, X);
                                         
-                    // 0: envelope, 1: xi = 3
+                    // 0: envelope, 1: xi = 2, 2: xi = 3
                     if (R < Rc) {
                         F[0] = 4.0*PI/(3.0*Ns)*pow(R,3.0);
                         F[1] = 4.0*PI/(3.0*Ns)*pow(R,3.0);
