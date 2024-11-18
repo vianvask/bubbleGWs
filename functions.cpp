@@ -1,7 +1,20 @@
 #include "functions.h"
 
-// evolution of the Universe on average, returns (k_max,t_{k_max})
-vector<double> averageevolution(function<double(double)> Gamma, const double tmin, const int jtmax, const double dt, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at, vector<vector<double> > &Ht, vector<vector<double> > &atau, vector<vector<double> > &ttau) {
+// evolution of the Universe on average, returns (k_max, t_{k_max}) with expansion and (a_p, t_p) without
+vector<double> averageevolution(function<double(double)> Gamma, const double tmin, const int jtmax, const double dt, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at, vector<vector<double> > &Ht, vector<vector<double> > &atau, vector<vector<double> > &ttau, const int expansion) {
+    
+    vector<double> tmp(2, 0.0);
+    if (expansion > 0) {
+        tmp = averageevolution_expansion(Gamma, tmin, jtmax, dt, Ft, taut, at, Ht, atau, ttau);
+    } else {
+        tmp = averageevolution_noexpansion(Gamma, tmin, jtmax, dt, Ft, taut, at, Ht, atau, ttau);
+    }
+    
+    return tmp;
+}
+
+// evolution of the Universe on average, accounting for the expansion of the universe
+vector<double> averageevolution_expansion(function<double(double)> Gamma, const double tmin, const int jtmax, const double dt, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at, vector<vector<double> > &Ht, vector<vector<double> > &atau, vector<vector<double> > &ttau) {
     
     // initial state in vacuum dominance:
     double t = tmin, a = exp(tmin), tau = 1.0 - exp(-tmin);
@@ -59,7 +72,66 @@ vector<double> averageevolution(function<double(double)> Gamma, const double tmi
     return tmp;
 }
 
-// expected number of bubbles nucleated in sphere of cube [x_1,x_2]^3
+// evolution of the Universe on average, neglecting the expansion of the universe
+vector<double> averageevolution_noexpansion(function<double(double)> Gamma, const double tmin, const int jtmax, const double dt, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at, vector<vector<double> > &Ht, vector<vector<double> > &atau, vector<vector<double> > &ttau) {
+    
+    // initial state in vacuum dominance:
+    double t = tmin, a = 1.0, tau = tmin;
+    double rhoV = 1.0, rhoV0 = 1.0, rhoR = 0.0;
+    
+    double H = 0.0, F = 1.0, F0 = 1.0;
+    vector<double> tmp(2);
+    double Nt, ap, tp;
+    
+    for (int jt = 0; jt < jtmax; jt++) {
+        tmp[0] = t;
+        tmp[1] = F;
+        Ft.push_back(tmp);
+        tmp[1] = H;
+        Ht.push_back(tmp);
+        tmp[1] = a;
+        at.push_back(tmp);
+        tmp[1] = tau;
+        taut.push_back(tmp);
+        
+        tmp[0] = tau;
+        tmp[1] = a;
+        atau.push_back(tmp);
+        tmp[1] = t;
+        ttau.push_back(tmp);
+        
+        //calculate the false vacuum fraction
+        Nt = 0.0;
+        F0 = F;
+        for (int j = 0; j < taut.size(); j++) {
+            Nt += 4.0*PI/3.0*dt*Gamma(taut[j][0])*pow(at[j][1]*radius(tau,taut[j][1]), 3.0);
+        }
+        F = exp(-Nt);
+        
+        // compute the scale factor and conformal time
+        H = 0.0;
+        a += dt*H*a;
+        tau += dt/a;
+        
+        if (F > 0.3) {
+            ap = a;
+            tp = t;
+        }
+        
+        // update the energy densities
+        rhoV = F;
+        rhoR += -4.0*H*rhoR*dt - (F-F0);
+        
+        t += dt;
+    }
+    
+    tmp[0] = ap;
+    tmp[1] = tp;
+    
+    return tmp;
+}
+
+// expected number of bubbles nucleated in cube [x_1,x_2]^3
 vector<vector<double> > Nbar(function<double(double)> Gamma, const double x1, const double x2, const vector<vector<double> > &Ft, const vector<vector<double> > &taut, const vector<vector<double> > &at) {
     
     const double dt = at[1][0] - at[0][0];
@@ -87,7 +159,7 @@ vector<vector<double> > Nbar(function<double(double)> Gamma, const double x1, co
 }
 
 // finds the time range where the computation should be performed as well as the simulation boundaries
-vector<double> findtrange(function<double(double)> Gamma, const double Nbarmin, const int Nb, const double tfrac, const double Fmin) {
+vector<double> findtrange(function<double(double)> Gamma, const double Nbarmin, const int Nb, const double tfrac, const double Fmin, const int expansion) {
     vector<double> trange(4);
     
     vector<vector<double> > Ft, taut, at, Ht, atau, ttau;
@@ -96,8 +168,8 @@ vector<double> findtrange(function<double(double)> Gamma, const double Nbarmin, 
     int jtmax = 6000;
     double dt = 0.001;
         
-    tmp = averageevolution(Gamma, -3.0, jtmax, dt, Ft, taut, at, Ht, atau, ttau);
-    double kmax = tmp[0];
+    tmp = averageevolution(Gamma, -3.0, jtmax, dt, Ft, taut, at, Ht, atau, ttau, expansion);
+    
     double tp = tmp[1];
     vector<vector<double> > Tt(jtmax, vector<double> (2,0.0));
     for (int jt = 0; jt < jtmax; jt++) {

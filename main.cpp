@@ -1,10 +1,13 @@
 #include "functions.h"
 
 int main (int argc, char *argv[]) {
+    
     // nucleation rate parameters, units are chosen such that H0 = 1;
     const double beta = atof(argv[1]);
     const double gammapbeta = atof(argv[2]);
+    
     const int index = atoi(argv[3]);
+    const int expansion = atoi(argv[4]);
     
     cout << setprecision(5) << fixed;
     clock_t time_req = clock(); // timing
@@ -16,39 +19,39 @@ int main (int argc, char *argv[]) {
     };
     
     // #nucleation sites
-    int Nn = 100000;
+    int Nn = 20000;
     
     // #points on the bubble surfaces
-    int Ns = 20000;
+    int Ns = 2000;
     
     // #timesteps
-    const int Nt = 10000;
+    const int Nt = 2000;
     
     // simulation volume determined by bar{N}(t=t_p) = J
-    int J = 140;
+    int J = 100;
     
     // largest GW wavenumber, Nk = k_max/k_min = #k values
-    const int Nk = 240;
+    const int Nk = 160;
     
     // determine the time range and simulation volume
-    vector<double> trange = findtrange(Gamma, 0.01, J, 6.0, 0.001);
-    double tmin = trange[0];
-    double tmax = trange[1];
+    vector<double> trange = findtrange(Gamma, 0.01, J, 6.0, 0.001, expansion);
+    double tmin = trange[0]; // bar{N}(t=t_min) = 0.01
+    double tmax = trange[1]; // bar{F}(t=t_max) = t_p + 6.0*(t_p - t_1)
     double dt = (tmax-tmin)/(1.0*Nt);
-    double L = trange[2];
+    double L = trange[2]; // bar{N}(t=t_p) = J
     double x1 = -L/2.0, x2 = L/2.0;
     
     cout << "time range: (" << tmin << ", " << tmax << ")" << endl;
     cout << "dt = " << dt << endl;
     cout << "L = " << L << endl;
     
-    double tmaxnuc = min(trange[3],tmax);
+    double tmaxnuc = min(trange[3],tmax); // bar{F}(t=t_max,nuc) = 0.001
     double dtnuc = (tmaxnuc-tmin)/(1.0*Nt);
     
     vector<vector<double> > Ft, taut, at, Ht, atau, ttau, Nb;
     
     // evolution of conformal time, scale factor, Hubble rate and expected number of bubbles, Nbar[jt][N,dN/dt]
-    averageevolution(Gamma, tmin, Nt, dtnuc, Ft, taut, at, Ht, atau, ttau);
+    averageevolution(Gamma, tmin, Nt, dtnuc, Ft, taut, at, Ht, atau, ttau, expansion);
     Nb = Nbar(Gamma, x1, x2, Ft, taut, at);
     
     // nucleate bubbles
@@ -61,9 +64,9 @@ int main (int argc, char *argv[]) {
     }
     cout << "#bubbles = " << bubbles.size() << endl;
     
-    // evolution of conformal time, scale factor and Hubble rate with larger dt
+    // recompute the background evolution with up to larger times with a larger dt
     Ft.clear(); taut.clear(); at.clear(); Ht.clear(); atau.clear(); ttau.clear();
-    averageevolution(Gamma, tmin, Nt, dt, Ft, taut, at, Ht, atau, ttau);
+    averageevolution(Gamma, tmin, Nt, dt, Ft, taut, at, Ht, atau, ttau, expansion);
     double taumax = taut[taut.size()-1][1];
     
     // generate a list of k values
@@ -92,7 +95,7 @@ int main (int argc, char *argv[]) {
     // initialize h_ij and its time derivative in the same way as T_ij
     vector<vector<vector<vector<vector<complex<double> > > > > > u = T, du = T;
     
-    string filename = "B_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(beta,2) + "_j_" + to_string(index) + ".dat";
+    string filename = "B_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(gammapbeta,2) + "_j_" + to_string(index) + ".dat";
     ofstream outfileB;
     outfileB.open(filename.c_str());
     
@@ -123,7 +126,7 @@ int main (int argc, char *argv[]) {
                 if (sqrt(xh[0]*xh[0]+xh[1]*xh[1]) > 0) {
                     phi = sgn(xh[1])*acos(xh[0]/sqrt(xh[0]*xh[0]+xh[1]*xh[1]));
                 }
-                outfileB << theta << "   " << phi << "   " << beta*Rc << "   " << ac << endl;
+                outfileB << theta << "   " << phi << "   " << Rc << "   " << ac << endl;
             }
             
             // compute the contribution to the stress-energy tensor
@@ -210,10 +213,10 @@ int main (int argc, char *argv[]) {
         }
     }
     
-    filename = "OmegaGW_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(beta,2) + "_j_" + to_string(index) + ".dat";
+    filename = "OmegaGW_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(gammapbeta,2) + "_j_" + to_string(index) + ".dat";
     ofstream outfileOmega;
     outfileOmega.open(filename.c_str());
-    filename = "OmegaTotGW_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(beta,2) + "_j_" + to_string(index) + ".dat";
+    filename = "OmegaTotGW_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(gammapbeta,2) + "_j_" + to_string(index) + ".dat";
     ofstream outfileOmegaTot;
     outfileOmegaTot.open(filename.c_str());
     
@@ -227,7 +230,11 @@ int main (int argc, char *argv[]) {
         t = at[jt][0];
         a = at[jt][1];
         H = Ht[jt][1];
-        Theta = 4.0*PI/(1.0*Nkhat)*3.0*pow(beta/H,2.0)/(16.0*pow(PI*L,3.0));
+        if (expansion > 0) {
+            Theta = 4.0*PI/(1.0*Nkhat)*3.0*pow(1.0/H,2.0)/(16.0*pow(PI*L,3.0));
+        } else {
+            Theta = 4.0*PI/(1.0*Nkhat)*3.0/(16.0*pow(PI*L,3.0));
+        }
         
         OmegaTot = zeroNa;
         for (int jk = 0; jk < Nk; jk++) {
@@ -244,7 +251,7 @@ int main (int argc, char *argv[]) {
             }
             
             if ((20*(jt+1))%Nt == 0) {
-                outfileOmega << t << "   " << k/beta << "    " << Omega[0] << "    " << Omega[1] << "    " << Omega[2] << endl;
+                outfileOmega << t << "   " << k << "    " << Omega[0] << "    " << Omega[1] << "    " << Omega[2] << endl;
             }
         }
         outfileOmegaTot << t << "    " << a << "    " << OmegaTot[0] << "    " << OmegaTot[1] << "    " << OmegaTot[2] << endl;
@@ -252,13 +259,19 @@ int main (int argc, char *argv[]) {
     outfileOmega.close();
     outfileOmegaTot.close();
     
-    filename = "OmegaGWfin_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(beta,2) + "_j_" + to_string(index) + ".dat";
+    filename = "OmegaGWfin_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(gammapbeta,2) + "_j_" + to_string(index) + ".dat";
     ofstream outfileOmegafin;
     outfileOmegafin.open(filename.c_str());
     
     a = at[Nt-1][1];
     H = Ht[Nt-1][1];
-    Theta = 4.0*PI/(1.0*Nkhat)*3.0*pow(beta/H,2.0)/(16.0*pow(PI*L,3.0));
+    
+    if (expansion > 0) {
+        Theta = 4.0*PI/(1.0*Nkhat)*3.0*pow(1.0/H,2.0)/(16.0*pow(PI*L,3.0));
+    } else {
+        Theta = 4.0*PI/(1.0*Nkhat)*3.0/(16.0*pow(PI*L,3.0));
+    }
+    
     for (int jk = 0; jk < Nk; jk++) {
         k = klist[jk];
         Omega = zeroNa;
@@ -271,7 +284,7 @@ int main (int argc, char *argv[]) {
                 }
             }
         }
-        outfileOmegafin << k/beta << "    " << Omega[0] << "    " << Omega[1] << "    " << Omega[2] << endl;
+        outfileOmegafin << k << "    " << Omega[0] << "    " << Omega[1] << "    " << Omega[2] << endl;
     }
     outfileOmegafin.close();
     
