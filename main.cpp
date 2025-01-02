@@ -19,13 +19,13 @@ int main (int argc, char *argv[]) {
     };
     
     // #nucleation sites
-    int Nn = 20000;
+    int Nn = 10000;
     
     // #points on the bubble surfaces
-    int Ns = 2000;
+    int Ns = 1000;
     
     // #timesteps
-    const int Nt = 2000;
+    const int Nt = 1000;
     
     // simulation volume determined by bar{N}(t=t_p) = J
     int J = 100;
