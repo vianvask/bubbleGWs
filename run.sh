@@ -1,6 +1,6 @@
 #!/bin/sh
 
-for j in {0..3}
-    do
-    ./bubbleGWs 8.0 0.0 $j 1 &
-    done
+./bubbleGWs 8.0 0.0 0 0 &
+./bubbleGWs 8.0 0.0 1 0 &
+./bubbleGWs 8.0 0.0 2 0 &
+./bubbleGWs 8.0 0.0 3 0
