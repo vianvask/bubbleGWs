@@ -63,7 +63,7 @@ int main (int argc, char *argv[]) {
     // generate a list of k values in log scale
     double kmin = 0.03*beta;
     double kmax = 30.0*beta;
-    double dlogk = (log(kmax) - log(kmin))/(1.0*(Nk+1));
+    double dlogk = (log(kmax) - log(kmin))/(1.0*(Nk-1));
     double k = kmin;
     vector<double> klist;
     for (int jk = 0; jk < Nk; jk++) {
