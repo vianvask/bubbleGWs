@@ -20,12 +20,12 @@ int main (int argc, char *argv[]) {
         return exp(beta*t - pow(gammapbeta*beta*t,2.0)/2.0);
     };
     
-    int Nn = 10000; // #nucleation sites
-    int Ns = 10000; // #points on the bubble surfaces
-    int Nt = 5000; // #timesteps
-    int Nk = 60; // #k values
+    int Nn = 20000; // #nucleation sites
+    int Ns = 12000; // #points on the bubble surfaces
+    int Nt = 6000; // #timesteps
+    int Nk = 100; // #k values
     
-    int J = 40; // bar{N}(t=t_p) = J, fixes L
+    int J = 50; // bar{N}(t=t_p) = J, fixes L
     double barNtmin = 0.01; // bar{N}(t=t_min) = barNtmin, fixes t_min
     double ftmax = 5.0; // bar{F}(t=t_max) = t_p + ftmax*(t_p - t_1), fixes t_max
     double barFtmaxnuc = 0.001; // bar{F}(t=t_max,nuc) = barFtmaxnuc, fixes t_max,nuc
@@ -63,7 +63,7 @@ int main (int argc, char *argv[]) {
     // generate a list of k values in log scale
     double kmin = 0.03*beta;
     double kmax = 30.0*beta;
-    double dlogk = (log(kmax) - log(kmin))/(1.0*Nk);
+    double dlogk = (log(kmax) - log(kmin))/(1.0*(Nk+1));
     double k = kmin;
     vector<double> klist;
     for (int jk = 0; jk < Nk; jk++) {
@@ -73,17 +73,17 @@ int main (int argc, char *argv[]) {
     
     // generate x and k directions
     vector<vector<double> > xhat = sphereN(Ns);
-    int Nkh = 3;
-    vector<vector<double> > khat(Nkh, vector<double> (3, 0.0));
-    for (int jd = 0; jd < Nkh; jd++) {
+    int Nkhat = 3;
+    vector<vector<double> > khat(Nkhat, vector<double> (3, 0.0));
+    for (int jd = 0; jd < Nkhat; jd++) {
         for (int j = 0; j < 3; j++) {
             khat[jd][j] = delta(jd,j);
         }
     }
     
-    // initialize T_ij, u_ij and its time derivative: Nt timesteps, 6 k directions, Nk k values, Na approximations, 6 ij components
+    // initialize T_ij: Nt timesteps, 6 k directions, Nk k values, Na approximations, 6 ij components
     int Na = 3;
-    vector<vector<vector<vector<vector<complex<double> > > > > > T(Nt, vector<vector<vector<vector<complex<double> > > > > (Nkh, vector<vector<vector<complex<double> > > > (Nk, vector<vector<complex<double> > > (Na, vector<complex<double> > (6, zero)))));
+    vector<vector<vector<vector<vector<complex<double> > > > > > T(Nt, vector<vector<vector<vector<complex<double> > > > > (Nkhat, vector<vector<vector<complex<double> > > > (Nk, vector<vector<complex<double> > > (Na, vector<complex<double> > (6, zero)))));
     
     // file for collision times on the surface of the first bubble
     string filename = "B_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(gammapbeta,2) + "_j_" + to_string(index) + ".dat";
@@ -152,7 +152,7 @@ int main (int argc, char *argv[]) {
                     
                     for (int jk = 0; jk < Nk; jk++) {
                         k = klist[jk];
-                        for (int jd = 0; jd < Nkh; jd++) {
+                        for (int jd = 0; jd < Nkhat; jd++) {
                             eikX = exp(-I*k*inner(khat[jd],X));
                             for (int ja = 0; ja < Na; ja++) {
                                 for (int j6 = 0; j6 < 6; j6++) {
@@ -170,7 +170,7 @@ int main (int argc, char *argv[]) {
     // TT projection
     for (int jt = 0; jt < Nt; jt++) {
         for (int jk = 0; jk < Nk; jk++) {
-            for (int jd = 0; jd < Nkh; jd++) {
+            for (int jd = 0; jd < Nkhat; jd++) {
                 for (int ja = 0; ja < Na; ja++) {
                     T[jt][jd][jk][ja] = TTprojection6(T[jt][jd][jk][ja], khat[jd]);
                 }
@@ -178,12 +178,12 @@ int main (int argc, char *argv[]) {
         }
     }
     
-    // u and du have half the timesteps of T because RK4 method is used
+    // initialize u and du, they have half the timesteps of T because RK4 method is used
     int jtu = 0;
     for (int jt = 0; jt < Nt-2; jt+=2) {
         jtu++;
     }
-    vector<vector<vector<vector<vector<complex<double> > > > > > u(jtu, vector<vector<vector<vector<complex<double> > > > > (Nkh, vector<vector<vector<complex<double> > > > (Nk, vector<vector<complex<double> > > (Na, vector<complex<double> > (6, zero)))));
+    vector<vector<vector<vector<vector<complex<double> > > > > > u(jtu, vector<vector<vector<vector<complex<double> > > > > (Nkhat, vector<vector<vector<complex<double> > > > (Nk, vector<vector<complex<double> > > (Na, vector<complex<double> > (6, zero)))));
     vector<vector<vector<vector<vector<complex<double> > > > > > du = u;
     
     // solve the perturbed Einstein equation
@@ -194,7 +194,7 @@ int main (int argc, char *argv[]) {
     vector<complex<double> > udu(2, zero);
     for (int jk = 0; jk < Nk; jk++) {
         k = klist[jk];
-        for (int jd = 0; jd < Nkh; jd++) {
+        for (int jd = 0; jd < Nkhat; jd++) {
             for (int ja = 0; ja < Na; ja++) {
                 for (int j6 = 0; j6 < 6; j6++) {
                     for (int jt = 0; jt < Nt; jt++) {
@@ -228,7 +228,7 @@ int main (int argc, char *argv[]) {
     const vector<double> zeroNa(Na, 0.0);
     const vector<double> j6coef {1.0, 2.0, 2.0, 1.0, 2.0, 1.0};
     complex<double> u0, du0;
-    double Theta;
+    double Theta, dtheta = 4.0*PI/Nkhat;
     vector<double> Omega(Na), OmegaTot(Na);
     
     // output the GW spectrum and the total GW energy density as a function of time
@@ -237,24 +237,24 @@ int main (int argc, char *argv[]) {
         a = at[2*jt][1];
         H = Ht[2*jt][1];
         if (expansion > 0) {
-            Theta = 4.0*PI/6.0*3.0*pow(1.0/H,2.0)/(16.0*pow(PI*L,3.0));
+            Theta = dtheta*3.0*pow(1.0/H,2.0)/(16.0*pow(PI*L,3.0));
         } else {
-            Theta = 4.0*PI/6.0*3.0/(16.0*pow(PI*L,3.0));
+            Theta = dtheta*3.0/(16.0*pow(PI*L,3.0));
         }
         OmegaTot = zeroNa;
         for (int jk = 0; jk < Nk; jk++) {
             k = klist[jk];
             Omega = zeroNa;
             for (int ja = 0; ja < Na; ja++) {
-                for (int jd = 0; jd < Nkh; jd++) {
+                for (int jd = 0; jd < Nkhat; jd++) {
                     for (int j6 = 0; j6 < 6; j6++) {
                         du0 = du[jt][jd][jk][ja][j6];
                         Omega[ja] += pow(k,3.0)*Theta*j6coef[j6]*pow(abs(du0),2.0);
                     }
                     if (jk > 0) {
-                        OmegaTot[ja] += (klist[jk]-klist[jk-1])/(3.0*k)*Omega[ja];
+                        OmegaTot[ja] += (k-klist[jk-1])/(3.0*k)*Omega[ja];
                     } else {
-                        OmegaTot[ja] += klist[jk]/(3.0*k)*Omega[ja];
+                        OmegaTot[ja] += 1.0/3.0*Omega[ja];
                     }
                 }
             }
@@ -274,15 +274,15 @@ int main (int argc, char *argv[]) {
     a = at[2*(Nt-1)][1];
     H = Ht[2*(Nt-1)][1];
     if (expansion > 0) {
-        Theta = 4.0*PI/6.0*3.0*pow(1.0/H,2.0)/(16.0*pow(PI*L,3.0));
+        Theta = dtheta*3.0*pow(1.0/H,2.0)/(16.0*pow(PI*L,3.0));
     } else {
-        Theta = 4.0*PI/6.0*3.0/(16.0*pow(PI*L,3.0));
+        Theta = dtheta*3.0/(16.0*pow(PI*L,3.0));
     }
     for (int jk = 0; jk < Nk; jk++) {
         k = klist[jk];
         Omega = zeroNa;
         for (int ja = 0; ja < Na; ja++) {
-            for (int jd = 0; jd < Nkh; jd++) {
+            for (int jd = 0; jd < Nkhat; jd++) {
                 for (int j6 = 0; j6 < 6; j6++) {
                     u0 = u[Nt-1][jd][jk][ja][j6];
                     du0 = du[Nt-1][jd][jk][ja][j6];
