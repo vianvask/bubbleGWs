@@ -23,9 +23,9 @@ int main (int argc, char *argv[]) {
     int Nn = 10000; // #nucleation sites
     int Ns = 10000; // #points on the bubble surfaces
     int Nt = 5000; // #timesteps
-    int Nk = 140; // #k values, k_max = Nk*k_min
+    int Nk = 60; // #k values
     
-    int J = 50; // bar{N}(t=t_p) = J, fixes L
+    int J = 40; // bar{N}(t=t_p) = J, fixes L
     double barNtmin = 0.01; // bar{N}(t=t_min) = barNtmin, fixes t_min
     double ftmax = 5.0; // bar{F}(t=t_max) = t_p + ftmax*(t_p - t_1), fixes t_max
     double barFtmaxnuc = 0.001; // bar{F}(t=t_max,nuc) = barFtmaxnuc, fixes t_max,nuc
@@ -48,7 +48,7 @@ int main (int argc, char *argv[]) {
     // nucleate bubbles
     vector<bubble> bubbles;
     int Ntry = 0;
-    while ((bubbles.size() < 8 || bubbles.size() > J) && Ntry < 100) {
+    while ((bubbles.size() < 10 || bubbles.size() > J) && Ntry < 100) {
         bubbles = nucleate(x1, x2, Nn, taut, Nb, mt);
         cout << bubbles.size() << endl;
         Ntry++;
@@ -60,13 +60,15 @@ int main (int argc, char *argv[]) {
     averageevolution(Gamma, tmin, Nt, dt, Ft, taut, at, Ht, atau, ttau, expansion);
     double taumax = taut[taut.size()-1][1];
     
-    // generate a list of k values
-    double kmin = 1.0/(2.0*L);
+    // generate a list of k values in log scale
+    double kmin = 0.03*beta;
+    double kmax = 30.0*beta;
+    double dlogk = (log(kmax) - log(kmin))/(1.0*Nk);
     double k = kmin;
     vector<double> klist;
-    while (k < (Nk + 0.1)*kmin) {
+    for (int jk = 0; jk < Nk; jk++) {
         klist.push_back(k);
-        k += kmin;
+        k = exp(log(k) + dlogk);
     }
     
     // generate x and k directions
@@ -249,10 +251,14 @@ int main (int argc, char *argv[]) {
                         du0 = du[jt][jd][jk][ja][j6];
                         Omega[ja] += pow(k,3.0)*Theta*j6coef[j6]*pow(abs(du0),2.0);
                     }
-                    OmegaTot[ja] += kmin/(3.0*k)*Omega[ja];
+                    if (jk > 0) {
+                        OmegaTot[ja] += (klist[jk]-klist[jk-1])/(3.0*k)*Omega[ja];
+                    } else {
+                        OmegaTot[ja] += klist[jk]/(3.0*k)*Omega[ja];
+                    }
                 }
             }
-            outfileOmega << t << "   " << k << "    " << Omega[0] << "    " << Omega[1] << "    " << Omega[2] << endl;
+            outfileOmega << t << "   " << k/beta << "    " << Omega[0] << "    " << Omega[1] << "    " << Omega[2] << endl;
         }
         outfileOmegaTot << t << "    " << a << "    " << OmegaTot[0] << "    " << OmegaTot[1] << "    " << OmegaTot[2] << endl;
     }
@@ -284,7 +290,7 @@ int main (int argc, char *argv[]) {
                 }
             }
         }
-        outfileOmegafin << k << "    " << Omega[0] << "    " << Omega[1] << "    " << Omega[2] << endl;
+        outfileOmegafin << k/beta << "    " << Omega[0] << "    " << Omega[1] << "    " << Omega[2] << endl;
     }
     outfileOmegafin.close();
     
