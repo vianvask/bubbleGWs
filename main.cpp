@@ -2,10 +2,13 @@
 
 int main (int argc, char *argv[]) {
     
-    // input
+    // input:
+    // nucleation rate parameters
     const double beta = atof(argv[1]);
     const double gammapbeta = atof(argv[2]);
+    // file naming
     const int index = atoi(argv[3]);
+    // 0: static Minkowski space, 1: FLRW space with transition from vacuum to radiation dominance
     const int expansion = atoi(argv[4]);
     
     cout << setprecision(5) << fixed;
@@ -18,21 +21,21 @@ int main (int argc, char *argv[]) {
     };
     
     int Nn = 10000; // #nucleation sites
-    int Ns = 4000; // #points on the bubble surfaces
-    int Nt = 8000; // #timesteps
-    int Nk = 120; // #k values, k_max = Nk*k_min
-
-    int J = 16; // bar{N}(t=t_p) = J, fixes L
+    int Ns = 10000; // #points on the bubble surfaces
+    int Nt = 5000; // #timesteps
+    int Nk = 140; // #k values, k_max = Nk*k_min
+    
+    int J = 50; // bar{N}(t=t_p) = J, fixes L
     double barNtmin = 0.01; // bar{N}(t=t_min) = barNtmin, fixes t_min
-    double ftmax = 4.0; // bar{F}(t=t_max) = t_p + ftmax*(t_p - t_1), fixes t_max
+    double ftmax = 5.0; // bar{F}(t=t_max) = t_p + ftmax*(t_p - t_1), fixes t_max
     double barFtmaxnuc = 0.001; // bar{F}(t=t_max,nuc) = barFtmaxnuc, fixes t_max,nuc
 
     // determine the time range and simulation volume
     vector<double> trange = findtrange(Gamma, barNtmin, J, ftmax, barFtmaxnuc, expansion);
     double tmin = trange[0];
     double tmax = trange[1];
-    double tmaxnuc = min(trange[3],tmax);
     double dt = (tmax-tmin)/(1.0*Nt);
+    double tmaxnuc = min(trange[3],tmax);
     double dtnuc = (tmaxnuc-tmin)/(1.0*Nt);
     double L = trange[2];
     double x1 = -L/2.0, x2 = L/2.0;
@@ -68,24 +71,25 @@ int main (int argc, char *argv[]) {
     
     // generate x and k directions
     vector<vector<double> > xhat = sphereN(Ns);
-    vector<vector<double> > khat(3, vector<double> (3, 0.0));
-    int Nkhat = khat.size();
-    for (int jd = 0; jd < Nkhat; jd++) {
+    int Nkh = 3;
+    vector<vector<double> > khat(Nkh, vector<double> (3, 0.0));
+    for (int jd = 0; jd < Nkh; jd++) {
         for (int j = 0; j < 3; j++) {
-            khat[jd][j] = delta(jd, j);
+            khat[jd][j] = delta(jd,j);
         }
     }
     
-    // initialize T_ij, u_ij and its time derivative: Nt timesteps, Nkhat k directions, Nk k values, Na approximations, 6 ij components
+    // initialize T_ij, u_ij and its time derivative: Nt timesteps, 6 k directions, Nk k values, Na approximations, 6 ij components
     int Na = 3;
-    vector<vector<vector<vector<vector<complex<double> > > > > > T(Nt, vector<vector<vector<vector<complex<double> > > > > (Nkhat, vector<vector<vector<complex<double> > > > (Nk, vector<vector<complex<double> > > (Na, vector<complex<double> > (6, zero)))));
-    vector<vector<vector<vector<vector<complex<double> > > > > > u = T, du = T;
+    vector<vector<vector<vector<vector<complex<double> > > > > > T(Nt, vector<vector<vector<vector<complex<double> > > > > (Nkh, vector<vector<vector<complex<double> > > > (Nk, vector<vector<complex<double> > > (Na, vector<complex<double> > (6, zero)))));
     
+    // file for collision times on the surface of the first bubble
     string filename = "B_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(gammapbeta,2) + "_j_" + to_string(index) + ".dat";
     ofstream outfileB;
     outfileB.open(filename.c_str());
     
-    double tau, taun, tauc, t, tc, a, ac, H, R, Rc, dV, kX, theta, phi;
+    double tau, taun, tauc, t, tc, a, ac, H, R, Rc, dV, theta, phi;
+    complex<double> eikX;
     vector<double> xc(3, 0.0), xh(3, 0.0), X(3, 0.0), xixj(6, 0.0), F(Na, 0.0);
 
     // loop over all the bubbles
@@ -146,11 +150,11 @@ int main (int argc, char *argv[]) {
                     
                     for (int jk = 0; jk < Nk; jk++) {
                         k = klist[jk];
-                        for (int jd = 0; jd < Nkhat; jd++) {
-                            kX = k*inner(khat[jd],X);
+                        for (int jd = 0; jd < Nkh; jd++) {
+                            eikX = exp(-I*k*inner(khat[jd],X));
                             for (int ja = 0; ja < Na; ja++) {
                                 for (int j6 = 0; j6 < 6; j6++) {
-                                    T[jt][jd][jk][ja][j6] += dV*F[ja]*xixj[j6]*exp(-I*kX);
+                                    T[jt][jd][jk][ja][j6] += dV*F[ja]*xixj[j6]*eikX;
                                 }
                             }
                         }
@@ -161,76 +165,86 @@ int main (int argc, char *argv[]) {
     }
     outfileB.close();
     
-    // solve the perturbed Einstein equation
-    complex<double> u0, um1, du0, T0;
-    for (int jt = 1; jt < Nt-1; jt++) {
-        a = at[jt][1];
-        H = Ht[jt][1];
-        
+    // TT projection
+    for (int jt = 0; jt < Nt; jt++) {
         for (int jk = 0; jk < Nk; jk++) {
-            k = klist[jk];
-            for (int jd = 0; jd < Nkhat; jd++) {
+            for (int jd = 0; jd < Nkh; jd++) {
                 for (int ja = 0; ja < Na; ja++) {
-                    for (int j6 = 0; j6 < 6; j6++) {
-                        T0 = T[jt][jd][jk][ja][j6];
-                        u0 = u[jt][jd][jk][ja][j6];
-                        um1 = u[jt-1][jd][jk][ja][j6];
-                        
-                        u[jt+1][jd][jk][ja][j6] = (2.0*pow(dt/a,2.0)*(T0 - pow(k,2.0)*u0) + 4.0*u0 - 2.0*um1 + 3.0*dt*H*um1)/(2.0 + 3.0*dt*H);
-                    }
+                    T[jt][jd][jk][ja] = TTprojection6(T[jt][jd][jk][ja], khat[jd]);
                 }
             }
         }
     }
     
+    // u and du have half the timesteps of T because RK4 method is used
+    int jtu = 0;
+    for (int jt = 0; jt < Nt-2; jt+=2) {
+        jtu++;
+    }
+    vector<vector<vector<vector<vector<complex<double> > > > > > u(jtu, vector<vector<vector<vector<complex<double> > > > > (Nkh, vector<vector<vector<complex<double> > > > (Nk, vector<vector<complex<double> > > (Na, vector<complex<double> > (6, zero)))));
+    vector<vector<vector<vector<vector<complex<double> > > > > > du = u;
+    
+    // solve the perturbed Einstein equation
+    vector<vector<complex<double> > > Tt(Nt, vector<complex<double> > (2,zero));
+    for (int jt = 0; jt < Nt; jt++) {
+        Tt[jt][0] = at[jt][0];
+    }
+    vector<complex<double> > udu(2, zero);
     for (int jk = 0; jk < Nk; jk++) {
-        for (int jd = 0; jd < Nkhat; jd++) {
+        k = klist[jk];
+        for (int jd = 0; jd < Nkh; jd++) {
             for (int ja = 0; ja < Na; ja++) {
-                
-                // compute the TT projection of u_ij(k)
-                for (int jt = 0; jt < Nt; jt++) {
-                    u[jt][jd][jk][ja] = TTprojection6(u[jt][jd][jk][ja], khat[jd]);
-                }
-                
-                // compute the derivative of u_ij(k)
-                for (int jt = 1; jt < Nt-1; jt++) {
-                    for (int j6 = 0; j6 < 6; j6++) {
-                        du[jt][jd][jk][ja][j6] = (u[jt+1][jd][jk][ja][j6] - u[jt-1][jd][jk][ja][j6])/(2.0*dt);
+                for (int j6 = 0; j6 < 6; j6++) {
+                    for (int jt = 0; jt < Nt; jt++) {
+                        Tt[jt][1] = T[jt][jd][jk][ja][j6];
+                    }
+                    jtu = 0;
+                    udu[0] = zero;
+                    udu[1] = zero;
+                    for (int jt = 0; jt < Nt-2; jt+=2) {
+                        udu = PEEstep(jt, udu, Tt, at, Ht, k);
+                        u[jtu][jd][jk][ja][j6] = udu[0];
+                        du[jtu][jd][jk][ja][j6] = udu[1];
+                        jtu++;
                     }
                 }
             }
         }
     }
-    Nt = Nt-1;
+    Nt = jtu; // Nt to match the length of u and du vectors
     
+    // file for the GW spectrum as a function of time
     filename = "OmegaGW_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(gammapbeta,2) + "_j_" + to_string(index) + ".dat";
     ofstream outfileOmega;
     outfileOmega.open(filename.c_str());
+    
+    // file for the total GW abundance as a function of time
     filename = "OmegaTotGW_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(gammapbeta,2) + "_j_" + to_string(index) + ".dat";
     ofstream outfileOmegaTot;
     outfileOmegaTot.open(filename.c_str());
     
     const vector<double> zeroNa(Na, 0.0);
     const vector<double> j6coef {1.0, 2.0, 2.0, 1.0, 2.0, 1.0};
-    vector<double> Omega(Na), OmegaTot(Na);
+    complex<double> u0, du0;
     double Theta;
+    vector<double> Omega(Na), OmegaTot(Na);
     
     // output the GW spectrum and the total GW energy density as a function of time
     for (int jt = 0; jt < Nt; jt++) {
-        t = at[jt][0];
-        a = at[jt][1];
-        H = Ht[jt][1];
+        t = at[2*jt][0];
+        a = at[2*jt][1];
+        H = Ht[2*jt][1];
         if (expansion > 0) {
-            Theta = 4.0*PI/(1.0*Nkhat)*3.0*pow(1.0/H,2.0)/(16.0*pow(PI*L,3.0));
+            Theta = 4.0*PI/6.0*3.0*pow(1.0/H,2.0)/(16.0*pow(PI*L,3.0));
         } else {
-            Theta = 4.0*PI/(1.0*Nkhat)*3.0/(16.0*pow(PI*L,3.0));
+            Theta = 4.0*PI/6.0*3.0/(16.0*pow(PI*L,3.0));
         }
         OmegaTot = zeroNa;
         for (int jk = 0; jk < Nk; jk++) {
             k = klist[jk];
             Omega = zeroNa;
             for (int ja = 0; ja < Na; ja++) {
-                for (int jd = 0; jd < Nkhat; jd++) {
+                for (int jd = 0; jd < Nkh; jd++) {
                     for (int j6 = 0; j6 < 6; j6++) {
                         du0 = du[jt][jd][jk][ja][j6];
                         Omega[ja] += pow(k,3.0)*Theta*j6coef[j6]*pow(abs(du0),2.0);
@@ -238,32 +252,31 @@ int main (int argc, char *argv[]) {
                     OmegaTot[ja] += kmin/(3.0*k)*Omega[ja];
                 }
             }
-            if (jt%20 == 0 || jt == Nt-1) {
-                outfileOmega << t << "   " << k << "    " << Omega[0] << "    " << Omega[1] << "    " << Omega[2] << endl;
-            }
+            outfileOmega << t << "   " << k << "    " << Omega[0] << "    " << Omega[1] << "    " << Omega[2] << endl;
         }
         outfileOmegaTot << t << "    " << a << "    " << OmegaTot[0] << "    " << OmegaTot[1] << "    " << OmegaTot[2] << endl;
     }
     outfileOmega.close();
     outfileOmegaTot.close();
     
+    // file for the final GW spectrum
     filename = "OmegaGWfin_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(gammapbeta,2) + "_j_" + to_string(index) + ".dat";
     ofstream outfileOmegafin;
     outfileOmegafin.open(filename.c_str());
     
     // output the final GW spectrum
-    a = at[Nt-1][1];
-    H = Ht[Nt-1][1];
+    a = at[2*(Nt-1)][1];
+    H = Ht[2*(Nt-1)][1];
     if (expansion > 0) {
-        Theta = 4.0*PI/(1.0*Nkhat)*3.0*pow(1.0/H,2.0)/(16.0*pow(PI*L,3.0));
+        Theta = 4.0*PI/6.0*3.0*pow(1.0/H,2.0)/(16.0*pow(PI*L,3.0));
     } else {
-        Theta = 4.0*PI/(1.0*Nkhat)*3.0/(16.0*pow(PI*L,3.0));
+        Theta = 4.0*PI/6.0*3.0/(16.0*pow(PI*L,3.0));
     }
     for (int jk = 0; jk < Nk; jk++) {
         k = klist[jk];
         Omega = zeroNa;
         for (int ja = 0; ja < Na; ja++) {
-            for (int jd = 0; jd < Nkhat; jd++) {
+            for (int jd = 0; jd < Nkh; jd++) {
                 for (int j6 = 0; j6 < 6; j6++) {
                     u0 = u[Nt-1][jd][jk][ja][j6];
                     du0 = du[Nt-1][jd][jk][ja][j6];

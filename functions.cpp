@@ -1,18 +1,5 @@
 #include "functions.h"
 
-// evolution of the Universe on average, returns (k_max, t_{k_max}) with expansion and (a_p, t_p) without
-vector<double> averageevolution(function<double(double)> Gamma, const double tmin, const int jtmax, const double dt, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at, vector<vector<double> > &Ht, vector<vector<double> > &atau, vector<vector<double> > &ttau, const int expansion) {
-    
-    vector<double> tmp(2, 0.0);
-    if (expansion > 0) {
-        tmp = averageevolution_expansion(Gamma, tmin, jtmax, dt, Ft, taut, at, Ht, atau, ttau);
-    } else {
-        tmp = averageevolution_noexpansion(Gamma, tmin, jtmax, dt, Ft, taut, at, Ht, atau, ttau);
-    }
-    
-    return tmp;
-}
-
 // evolution of the Universe on average, accounting for the expansion of the universe
 vector<double> averageevolution_expansion(function<double(double)> Gamma, const double tmin, const int jtmax, const double dt, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at, vector<vector<double> > &Ht, vector<vector<double> > &atau, vector<vector<double> > &ttau) {
     
@@ -127,6 +114,19 @@ vector<double> averageevolution_noexpansion(function<double(double)> Gamma, cons
     
     tmp[0] = ap;
     tmp[1] = tp;
+    
+    return tmp;
+}
+
+// evolution of the Universe on average, returns (k_max, t_{k_max}) with expansion and (a_p, t_p) without
+vector<double> averageevolution(function<double(double)> Gamma, const double tmin, const int jtmax, const double dt, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at, vector<vector<double> > &Ht, vector<vector<double> > &atau, vector<vector<double> > &ttau, const int expansion) {
+    
+    vector<double> tmp(2, 0.0);
+    if (expansion > 0) {
+        tmp = averageevolution_expansion(Gamma, tmin, jtmax, dt, Ft, taut, at, Ht, atau, ttau);
+    } else {
+        tmp = averageevolution_noexpansion(Gamma, tmin, jtmax, dt, Ft, taut, at, Ht, atau, ttau);
+    }
     
     return tmp;
 }
@@ -299,6 +299,52 @@ double findtauc(const double x1, const double x2, const double taun, const vecto
     return tauc;
 }
 
+// perturbed Einstein equation
+complex<double> ddu(complex<double> u, complex<double> du, complex<double> T, double a, double H, double k) {
+    return T/pow(a,2.0) - 3.0*H*du - pow(k/a,2.0)*u;
+}
+
+// take a step according to the perturbed Einstein equation using the 4th order Runge-Kutta method
+vector<complex<double> > PEEstep(int jt, vector<complex<double> > &udu, vector<vector<complex<double> > > &Tt, vector<vector<double> > &at, vector<vector<double> > &Ht, double k) {
+    
+    complex<double> u = udu[0];
+    complex<double> du = udu[1];
+    
+    double dt = at[jt+2][0] - at[jt][0];
+    complex<double> T;
+    double a, H;
+    
+    // t
+    T = Tt[jt][1];
+    a = at[jt][1];
+    H = Ht[jt][1];
+    complex<double> k11 = dt*du;
+    complex<double> k12 = dt*ddu(u,du,T,a,H,k);
+    
+    // t + dt/2
+    T = Tt[jt+1][1];
+    a = at[jt+1][1];
+    H = Ht[jt+1][1];
+    complex<double> k21 = dt*(du+k12/2.0);
+    complex<double> k22 = dt*ddu(u+k11/2.0,du+k12/2.0,T,a,H,k);
+    complex<double> k31 = dt*(du+k22/2.0);
+    complex<double> k32 = dt*ddu(u+k21/2.0,du+k22/2.0,T,a,H,k);
+
+    // t + dt
+    T = Tt[jt+2][1];
+    a = at[jt+2][1];
+    H = Ht[jt+2][1];
+    complex<double> k41 = dt*(du+k32);
+    complex<double> k42 = dt*ddu(u+k31,du+k32,T,a,H,k);
+
+    vector<complex<double> > udu2(2,zero);
+    udu2[0] = u + (k11+2.0*k21+2.0*k31+k41)/6.0;
+    udu2[1] = du + (k12+2.0*k22+2.0*k32+k42)/6.0;
+    
+    return udu2;
+}
+
+// transvese traceless projection
 vector<vector<complex<double> > > TTprojection(const vector<vector<complex<double> > > &X, const vector<double> khat) {
     vector<vector<complex<double> > > Y(3, vector<complex<double> > (3, zero));
     for (int i=0; i<3; i++) {
@@ -314,6 +360,7 @@ vector<vector<complex<double> > > TTprojection(const vector<vector<complex<doubl
     return Y;
 }
 
+// transvese traceless projection with input including only the 6 free components
 vector<complex<double> > TTprojection6(const vector<complex<double> > &X, const vector<double> khat) {
     vector<vector<complex<double> > > Y(3, vector<complex<double> > (3, zero));
     vector<complex<double> > Z(6, zero);

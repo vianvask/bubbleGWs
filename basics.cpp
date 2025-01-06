@@ -7,14 +7,17 @@ string to_string_prec(const double a, const int n) {
     return out.str();
 }
 
+// Kronecker delta
 int delta(int i, int j) {
     return (i==j);
 }
 
+// sign function
 int sgn(const double a) {
     return (0.0 < a) - (a < 0.0);
 }
 
+// modulo of integers
 int imod(int i, int n) {
     return (i % n + n) % n;
 }
@@ -89,7 +92,6 @@ double distance(const vector<double> &X, const vector<double> &Y, double x1, dou
     }
     return d;
 }
-
 
 // projection of vector x inside a cube
 vector<double> periodic(double x1, double x2, vector<double> &x) {
