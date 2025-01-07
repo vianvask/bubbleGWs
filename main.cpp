@@ -20,14 +20,14 @@ int main (int argc, char *argv[]) {
         return exp(beta*t - pow(gammapbeta*beta*t,2.0)/2.0);
     };
     
-    int Nn = 20000; // #nucleation sites
-    int Ns = 12000; // #points on the bubble surfaces
-    int Nt = 6000; // #timesteps
+    int Nn = 10000; // #nucleation sites
+    int Ns = 3000; // #points on the bubble surfaces
+    int Nt = 3000; // #timesteps
     int Nk = 100; // #k values
     
-    int J = 50; // bar{N}(t=t_p) = J, fixes L
+    int J = 30; // bar{N}(t=t_p) = J, fixes L
     double barNtmin = 0.01; // bar{N}(t=t_min) = barNtmin, fixes t_min
-    double ftmax = 5.0; // bar{F}(t=t_max) = t_p + ftmax*(t_p - t_1), fixes t_max
+    double ftmax = 6.0; // bar{F}(t=t_max) = t_p + ftmax*(t_p - t_1), fixes t_max
     double barFtmaxnuc = 0.001; // bar{F}(t=t_max,nuc) = barFtmaxnuc, fixes t_max,nuc
 
     // determine the time range and simulation volume
@@ -251,11 +251,7 @@ int main (int argc, char *argv[]) {
                         du0 = du[jt][jd][jk][ja][j6];
                         Omega[ja] += pow(k,3.0)*Theta*j6coef[j6]*pow(abs(du0),2.0);
                     }
-                    if (jk > 0) {
-                        OmegaTot[ja] += (k-klist[jk-1])/(3.0*k)*Omega[ja];
-                    } else {
-                        OmegaTot[ja] += 1.0/3.0*Omega[ja];
-                    }
+                    OmegaTot[ja] += dlogk*Omega[ja];
                 }
             }
             outfileOmega << t << "   " << k/beta << "    " << Omega[0] << "    " << Omega[1] << "    " << Omega[2] << endl;
