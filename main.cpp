@@ -21,11 +21,11 @@ int main (int argc, char *argv[]) {
     };
     
     int Nn = 10000; // #nucleation sites
-    int Ns = 3000; // #points on the bubble surfaces
-    int Nt = 3000; // #timesteps
+    int Ns = 2000; // #points on the bubble surfaces
+    int Nt = 2000; // #timesteps
     int Nk = 100; // #k values
     
-    int J = 30; // bar{N}(t=t_p) = J, fixes L
+    int J = 20; // bar{N}(t=t_p) = J, fixes L
     double barNtmin = 0.01; // bar{N}(t=t_min) = barNtmin, fixes t_min
     double ftmax = 6.0; // bar{F}(t=t_max) = t_p + ftmax*(t_p - t_1), fixes t_max
     double barFtmaxnuc = 0.001; // bar{F}(t=t_max,nuc) = barFtmaxnuc, fixes t_max,nuc

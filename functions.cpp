@@ -352,7 +352,7 @@ vector<vector<complex<double> > > TTprojection(const vector<vector<complex<doubl
             // sum over l and m
             for (int l=0; l<3; l++) {
                 for (int m=0; m<3; m++) {
-                    Y[i][j] += (1.0*delta(i,l)*delta(j,m) - 2.0*delta(i,l)*khat[j]*khat[m] + 0.5*delta(i,j)*khat[l]*khat[m] + 0.5*delta(l,m)*khat[i]*khat[j] - 0.5*delta(i,j)*delta(l,m) + 0.5*khat[i]*khat[j]*khat[l]*khat[m])*X[l][m];
+                    Y[i][j] += (delta(i,l)*delta(j,m) - delta(i,j)*delta(l,m)/2.0 - delta(i,l)*khat[j]*khat[m] - delta(j,m)*khat[i]*khat[l] + delta(i,j)*khat[l]*khat[m]/2.0 + delta(l,m)*khat[i]*khat[j]/2.0 + khat[i]*khat[j]*khat[l]*khat[m]/2.0)*X[l][m];
                 }
             }
         }
