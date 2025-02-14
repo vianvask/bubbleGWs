@@ -178,8 +178,12 @@ vector<double> findtrange(function<double(double)> Gamma, const double Nbarmin, 
     }
 
     vector<vector<double> > Nk = Nbar(Gamma, -0.5, 0.5, Ft, taut, at);
-    vector<vector<double> > Nt(jtmax, vector<double> (2,0.0));
+    int jtmaxnum = 0;
     for (int jt = 0; jt < jtmax; jt++) {
+        if(isfinite(Nk[jt][1])){jtmaxnum+=1;}
+    }
+    vector<vector<double> > Nt(jtmaxnum, vector<double> (2,0.0));
+    for (int jt = 0; jt < jtmaxnum; jt++) {
         Nt[jt][0] = Nk[jt][0];
         Nt[jt][1] = Nk[jt][1];
     }
@@ -197,7 +201,7 @@ vector<double> findtrange(function<double(double)> Gamma, const double Nbarmin, 
 // nucleates bubbles
 vector<bubble> nucleate(const double x1, const double x2, const int Nn, const vector<vector<double> > &taut, const vector<vector<double> > &Nb, rgen &mt) {
     const double dt = taut[1][0] - taut[0][0];
-    
+    bool toohighprob=false;
     // generate list of nucleation sites
     vector<vector<double> > xlist(Nn, vector<double> (3, 0.0));
     for (int j = 0; j < Nn; j++) {
@@ -220,7 +224,7 @@ vector<bubble> nucleate(const double x1, const double x2, const int Nn, const ve
         for (int j = 0; j < Nn; j++) {
             xc = xlist[j];
             if (fV*dt*Nb[jt][2] > 1.0) {
-                cout << "Warning: too high nucleation probability." << endl;
+                toohighprob=true; 
             }
             
             // try to nucleate a bubble
@@ -245,6 +249,9 @@ vector<bubble> nucleate(const double x1, const double x2, const int Nn, const ve
         }
     }
     
+    if (toohighprob) {
+        cout << "Warning: too high nucleation probability." << endl;               
+    }
     return bubbles;
 }
 

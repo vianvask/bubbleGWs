@@ -13,7 +13,7 @@ int main (int argc, char *argv[]) {
     
     cout << setprecision(5) << fixed;
     clock_t time_req = clock(); // timing
-    rgen mt(time(NULL)*(index+1)/beta); // random number generator
+    rgen mt(time(NULL)+(index+1)+beta); // random number generator
 
     // bubble nucleation rate, units chosen such that H0 = 1
     function<double(double)> Gamma = [beta, gammapbeta](double t) {
