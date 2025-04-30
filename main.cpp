@@ -21,13 +21,13 @@ int main (int argc, char *argv[]) {
     };
     
     int Nn = 10000; // #nucleation sites
-    int Ns = 2000; // #points on the bubble surfaces
-    int Nt = 2000; // #timesteps
+    int Ns = 40000; // #points on the bubble surfaces
+    int Nt = 1000; // #timesteps
     int Nk = 100; // #k values
     
-    int J = 20; // bar{N}(t=t_p) = J, fixes L
+    int J = 200; // bar{N}(t=t_p) = J, fixes L
     double barNtmin = 0.01; // bar{N}(t=t_min) = barNtmin, fixes t_min
-    double ftmax = 6.0; // bar{F}(t=t_max) = t_p + ftmax*(t_p - t_1), fixes t_max
+    double ftmax = 8.0; // t_max = t_p + ftmax*<R>
     double barFtmaxnuc = 0.001; // bar{F}(t=t_max,nuc) = barFtmaxnuc, fixes t_max,nuc
 
     // determine the time range and simulation volume
@@ -61,8 +61,8 @@ int main (int argc, char *argv[]) {
     double taumax = taut[taut.size()-1][1];
     
     // generate a list of k values in log scale
-    double kmin = 0.03*beta;
-    double kmax = 30.0*beta;
+    double kmin = 1.0/L;
+    double kmax = 40.0*beta;
     double dlogk = (log(kmax) - log(kmin))/(1.0*(Nk-1));
     double k = kmin;
     vector<double> klist;

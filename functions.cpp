@@ -188,12 +188,12 @@ vector<double> findtrange(function<double(double)> Gamma, const double Nbarmin, 
         Nt[jt][1] = Nk[jt][1];
     }
     
-    double L = pow(Nb/interpolate(tp, Nt), 1.0/3.0);
+    double L = pow(Nb/interpolate(tp, Nt), 1.0/3.0); // bar{N}(t=t_p) = N_b, fixes L
     
-    trange[0] = findrootG(Nbarmin/pow(L,3.0), dt, Nt);
-    trange[1] = tp + tfrac*(tp - findrootG(1.0/pow(L,3.0), dt, Nt));
+    trange[0] = findrootG(Nbarmin/pow(L,3.0), dt, Nt); // bar{N}(t=t_min) = barNtmin, fixes t_min
+    trange[1] = tp + tfrac*L/pow(4.0*PI/3.0*Nb,1.0/3.0); // t_max = t_p + ftmax*<R>, fixes t_max
     trange[2] = L;
-    trange[3] = findrootG(1.0-Fmin, dt, Tt);
+    trange[3] = findrootG(1.0-Fmin, dt, Tt); // bar{F}(t=t_max,nuc) = barFtmaxnuc, fixes t_max, nuc
     
     return trange;
 }
