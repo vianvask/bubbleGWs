@@ -25,9 +25,9 @@ int main (int argc, char *argv[]) {
     int Nt = 1000; // #timesteps
     int Nk = 100; // #k values
     
-    int J = 200; // bar{N}(t=t_p) = J, fixes L
+    int J = 100; // bar{N}(t=t_p) = J, fixes L
     double barNtmin = 0.01; // bar{N}(t=t_min) = barNtmin, fixes t_min
-    double ftmax = 8.0; // t_max = t_p + ftmax*<R>
+    double ftmax = 16.0; // t_max = t_p + ftmax*<R>
     double barFtmaxnuc = 0.001; // bar{F}(t=t_max,nuc) = barFtmaxnuc, fixes t_max,nuc
 
     // determine the time range and simulation volume
@@ -62,7 +62,7 @@ int main (int argc, char *argv[]) {
     
     // generate a list of k values in log scale
     double kmin = 1.0/L;
-    double kmax = 40.0*beta;
+    double kmax = 30.0*beta;
     double dlogk = (log(kmax) - log(kmin))/(1.0*(Nk-1));
     double k = kmin;
     vector<double> klist;
@@ -133,8 +133,9 @@ int main (int argc, char *argv[]) {
             for (int jt = 0; jt < Nt; jt++) {
                 tau = taut[jt][1];
                 if (tau > taun) {
+                    a = at[jt][1];
                     R = radius(tau, taun);
-                    dV = 4.0*PI/(3.0*Ns)*pow(R,3.0);
+                    dV = 4.0*PI/(3.0*a*Ns)*pow(a*R,3.0);
                     for (int j = 0; j < 3; j++) {
                         X[j] = xc[j] + R*xh[j];
                     }
@@ -146,8 +147,8 @@ int main (int argc, char *argv[]) {
                         F[2] = 1.0;
                     } else {
                         F[0] = 0.0;
-                        F[1] = pow(Rc/R,3.0);
-                        F[2] = pow(Rc/R,4.0);
+                        F[1] = pow(ac*Rc/(a*R),3.0);
+                        F[2] = pow(ac*Rc/(a*R),4.0);
                     }
                     
                     for (int jk = 0; jk < Nk; jk++) {
