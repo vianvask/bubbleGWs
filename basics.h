@@ -20,6 +20,7 @@ class bubble {
     public:
         vector<double> x;
         double tau;
+        double a;
 };
 
 string to_string_prec(const double a, const int n);

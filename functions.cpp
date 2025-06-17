@@ -199,7 +199,7 @@ vector<double> findtrange(function<double(double)> Gamma, const double Nbarmin, 
 }
 
 // nucleates bubbles
-vector<bubble> nucleate(const double x1, const double x2, const int Nn, const vector<vector<double> > &taut, const vector<vector<double> > &Nb, rgen &mt) {
+vector<bubble> nucleate(const double x1, const double x2, const int Nn, const vector<vector<double> > &taut, const vector<vector<double> > &at, const vector<vector<double> > &Nb, rgen &mt) {
     const double dt = taut[1][0] - taut[0][0];
     bool toohighprob=false;
     // generate list of nucleation sites
@@ -212,7 +212,7 @@ vector<bubble> nucleate(const double x1, const double x2, const int Nn, const ve
     
     bubble b0;
     vector<bubble> bubbles;
-    double taun;
+    double taun, an;
     vector<double> xc(3, 0.0);
     
     // nucleate bubbles
@@ -221,6 +221,7 @@ vector<bubble> nucleate(const double x1, const double x2, const int Nn, const ve
     bool flag;
     for (int jt = 0; jt < taut.size(); jt++) {
         taun = taut[jt][1];
+        an = at[jt][1];
         for (int j = 0; j < Nn; j++) {
             xc = xlist[j];
             if (fV*dt*Nb[jt][2] > 1.0) {
@@ -243,6 +244,7 @@ vector<bubble> nucleate(const double x1, const double x2, const int Nn, const ve
                 if (flag) {
                     b0.x = xc;
                     b0.tau = taun;
+                    b0.a = an;
                     bubbles.push_back(b0);
                 }
             }

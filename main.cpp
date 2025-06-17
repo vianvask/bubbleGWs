@@ -49,7 +49,7 @@ int main (int argc, char *argv[]) {
     vector<bubble> bubbles;
     int Ntry = 0;
     while ((bubbles.size() < 10 || bubbles.size() > J) && Ntry < 100) {
-        bubbles = nucleate(x1, x2, Nn, taut, Nb, mt);
+        bubbles = nucleate(x1, x2, Nn, taut, at, Nb, mt);
         cout << bubbles.size() << endl;
         Ntry++;
     }
@@ -90,7 +90,7 @@ int main (int argc, char *argv[]) {
     ofstream outfileB;
     outfileB.open(filename.c_str());
     
-    double tau, taun, tauc, t, tc, a, ac, H, R, Rc, dV, theta, phi;
+    double tau, taun, tauc, t, tc, a, an, ac, H, R, dR, Rc, dV, theta, phi, K;
     complex<double> eikX;
     vector<double> xc(3, 0.0), xh(3, 0.0), X(3, 0.0), xixj(6, 0.0), F(Na, 0.0);
 
@@ -100,6 +100,7 @@ int main (int argc, char *argv[]) {
         
         xc = bubbles[jb].x;
         taun = bubbles[jb].tau;
+        an = bubbles[jb].a;
         
         // loop over the points on the sphere
         for (int jp = 0; jp < Ns; jp++) {
@@ -130,10 +131,14 @@ int main (int argc, char *argv[]) {
             }
             
             // compute the contribution to the stress-energy tensor
+            R = 0.0;
+            K = an;
             for (int jt = 0; jt < Nt; jt++) {
                 tau = taut[jt][1];
                 if (tau > taun) {
                     a = at[jt][1];
+                    H = Ht[jt][1];
+                    dR = radius(tau, taun) - R;
                     R = radius(tau, taun);
                     dV = 4.0*PI/(3.0*a*Ns)*pow(a*R,3.0);
                     for (int j = 0; j < 3; j++) {
@@ -142,13 +147,14 @@ int main (int argc, char *argv[]) {
                                         
                     // 0: envelope, 1: xi = 2, 2: xi = 3
                     if (R < Rc) {
-                        F[0] = 1.0;
-                        F[1] = 1.0;
-                        F[2] = 1.0;
+                        K = 1.0/(9.0*pow(a,2.0)*pow(H*R,3.0))*exp(-3.0*a*H*dR)*(-2.0-3.0*a*H*(2.0+3.0*a*H*(1.0+H*K*(dR-R))*(dR-R))*(dR-R)+exp(3.0*a*H*dR)*(2.0+3.0*a*H*R*(-2.0+3.0*a*H*R))); // solution of R*dK/dR = 3*(a - K + a*H*R*K)/R
+                        F[0] = K/a;
+                        F[1] = K/a;
+                        F[2] = K/a;
                     } else {
                         F[0] = 0.0;
-                        F[1] = pow(ac*Rc/(a*R),3.0);
-                        F[2] = pow(ac*Rc/(a*R),4.0);
+                        F[1] = K/ac*pow(ac*Rc/(a*R),3.0);
+                        F[2] = K/ac*pow(ac*Rc/(a*R),4.0);
                     }
                     
                     for (int jk = 0; jk < Nk; jk++) {
