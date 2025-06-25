@@ -21,13 +21,13 @@ int main (int argc, char *argv[]) {
     };
     
     int Nn = 10000; // #nucleation sites
-    int Ns = 40000; // #points on the bubble surfaces
-    int Nt = 1000; // #timesteps
-    int Nk = 100; // #k values
+    int Ns = 10000; // #points on the bubble surfaces
+    int Nt = 500; // #timesteps
+    int Nk = 50; // #k values
     
-    int J = 100; // bar{N}(t=t_p) = J, fixes L
+    int J = 40; // bar{N}(t=t_p) = J, fixes L
     double barNtmin = 0.01; // bar{N}(t=t_min) = barNtmin, fixes t_min
-    double ftmax = 16.0; // t_max = t_p + ftmax*<R>
+    double ftmax = 10.0; // t_max = t_p + ftmax*<R>
     double barFtmaxnuc = 0.001; // bar{F}(t=t_max,nuc) = barFtmaxnuc, fixes t_max,nuc
 
     // determine the time range and simulation volume
@@ -90,7 +90,7 @@ int main (int argc, char *argv[]) {
     ofstream outfileB;
     outfileB.open(filename.c_str());
     
-    double tau, taun, tauc, t, tc, a, an, ac, H, R, dR, Rc, dV, theta, phi, K;
+    double tau, taun, tauc, t, tc, a, an, ac, H, Hc, R, dR, Rc, dA, theta, phi, K;
     complex<double> eikX;
     vector<double> xc(3, 0.0), xh(3, 0.0), X(3, 0.0), xixj(6, 0.0), F(Na, 0.0);
 
@@ -117,7 +117,8 @@ int main (int argc, char *argv[]) {
             // find when the collision happens in the direction xh
             tauc = findtauc(x1, x2, taun, xh, xc, bubbles, jb, 2.0*taumax);
             tc = interpolate(tauc, ttau);
-            ac = interpolate(tauc, atau);
+            ac = interpolate(tc, at);
+            Hc = interpolate(tc, Ht);
             Rc = radius(tauc, taun);
             
             // output the collision radii of first bubble
@@ -140,21 +141,24 @@ int main (int argc, char *argv[]) {
                     H = Ht[jt][1];
                     dR = radius(tau, taun) - R;
                     R = radius(tau, taun);
-                    dV = 4.0*PI/(3.0*a*Ns)*pow(a*R,3.0);
                     for (int j = 0; j < 3; j++) {
                         X[j] = xc[j] + R*xh[j];
                     }
+                    
+                    // dA = dOmega (a R)^2/a
+                    dA = 4.0*PI/(a*Ns)*pow(a*R,2.0);
                                         
-                    // 0: envelope, 1: xi = 2, 2: xi = 3
+                    // K = gamma*sigma/DeltaV
                     if (R < Rc) {
-                        K = 1.0/(9.0*pow(a,2.0)*pow(H*R,3.0))*exp(-3.0*a*H*dR)*(-2.0-3.0*a*H*(2.0+3.0*a*H*(1.0+H*K*(dR-R))*(dR-R))*(dR-R)+exp(3.0*a*H*dR)*(2.0+3.0*a*H*R*(-2.0+3.0*a*H*R))); // solution of R*dK/dR = 3*(a - K + a*H*R*K)/R
-                        F[0] = K/a;
-                        F[1] = K/a;
-                        F[2] = K/a;
+                        K = (2 - 2*exp(-3*a*H*R) - 6*a*H*R + 9*pow(a*H*R,2.0))/(27.0*H*pow(a*H*R,2.0));
+                        F[0] = K;
+                        F[1] = K;
+                        F[2] = K;
                     } else {
-                        F[0] = 0.0;
-                        F[1] = K/ac*pow(ac*Rc/(a*R),3.0);
-                        F[2] = K/ac*pow(ac*Rc/(a*R),4.0);
+                        K = exp(-3*a*H*(R - Rc))*(2 - 2*exp(-3*ac*Hc*Rc) - 6*ac*Hc*Rc + 9*pow(ac*Hc*Rc,2.0))/(27.0*Hc*pow(ac*Hc*R,2.0));
+                        F[0] = 0.0; // envelope approximation
+                        F[1] = K; // bulk flow approximation
+                        F[2] = K*Rc/R; // extra R_c/R dissipation
                     }
                     
                     for (int jk = 0; jk < Nk; jk++) {
@@ -163,7 +167,7 @@ int main (int argc, char *argv[]) {
                             eikX = exp(-I*k*inner(khat[jd],X));
                             for (int ja = 0; ja < Na; ja++) {
                                 for (int j6 = 0; j6 < 6; j6++) {
-                                    T[jt][jd][jk][ja][j6] += dV*F[ja]*xixj[j6]*eikX;
+                                    T[jt][jd][jk][ja][j6] += dA*F[ja]*xixj[j6]*eikX;
                                 }
                             }
                         }
