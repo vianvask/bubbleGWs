@@ -19,12 +19,12 @@ int main (int argc, char *argv[]) {
         return exp(beta*t - pow(gammapbeta*beta*t,2.0)/2.0);
     };
     
-    int Nn = 10000; // #nucleation sites
-    int Ns = 10000; // #points on the bubble surfaces
-    int Nt = 500; // #timesteps
+    int Nn = 20000; // #nucleation sites
+    int Ns = 20000; // #points on the bubble surfaces
+    int Nt = 2000; // #timesteps
     int Nk = 50; // #k values
     
-    int J = 40; // bar{N}(t=t_p) = J, fixes L
+    int J = 50; // bar{N}(t=t_p) = J, fixes L
     double barNtmin = 0.01; // bar{N}(t=t_min) = barNtmin, fixes t_min
     double ftmax = 10.0; // t_max = t_p + ftmax*<R>
     double barFtmaxnuc = 0.001; // bar{F}(t=t_max,nuc) = barFtmaxnuc, fixes t_max,nuc
@@ -89,6 +89,11 @@ int main (int argc, char *argv[]) {
     ofstream outfileB;
     outfileB.open(filename.c_str());
     
+    // initialize binning of the collision radius
+    const int Nbins = 100;
+    const double Rcmax = 4.0/beta, acRcmax = 4.0/beta;
+    vector<double> Rcbins(Nbins, 0.0), acRcbins(Nbins, 0.0);
+    
     double tau, taun, tauc, t, tc, a, an, ac, H, Hc, R, dR, Rc, dA, theta, phi, K;
     complex<double> eikX;
     vector<double> xc(3, 0.0), xh(3, 0.0), X(3, 0.0), xixj(6, 0.0), F(Na, 0.0);
@@ -130,6 +135,14 @@ int main (int argc, char *argv[]) {
                 outfileB << theta << "   " << phi << "   " << Rc << "   " << ac << endl;
             }
             
+            // add the point to the distribution of collision radii
+            if (Rc < Rcmax) {
+                Rcbins[(int) floor(Nbins*Rc/Rcmax)] += ac*ac;
+            }
+            if (ac*Rc < acRcmax) {
+                acRcbins[(int) floor(Nbins*ac*Rc/acRcmax)] += ac*ac;
+            }
+            
             // compute the contribution to the stress-energy tensor
             R = 0.0;
             K = 0.0;
@@ -165,7 +178,7 @@ int main (int argc, char *argv[]) {
                         }
                         F[0] = 0.0; // envelope approximation
                         F[1] = K; // bulk flow approximation
-                        F[2] = K*Rc/R; // extra R_c/R dissipation
+                        F[2] = K*ac*Rc/(a*R); // extra a_c*R_c/a*R dissipation
                     }
                     
                     for (int jk = 0; jk < Nk; jk++) {
@@ -184,6 +197,19 @@ int main (int argc, char *argv[]) {
         }
     }
     outfileB.close();
+    
+    // output the R_c and a_c R_c distributions
+    ofstream outfileRc, outfileacRc;
+    filename = "Rc_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(gammapbeta,2) + "_j_" + to_string(index) + ".dat";
+    outfileRc.open(filename.c_str());
+    filename = "acRc_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(gammapbeta,2) + "_j_" + to_string(index) + ".dat";
+    outfileacRc.open(filename.c_str());
+    for (int jb = 0; jb < Nbins; jb++) {
+        outfileRc << beta*jb*Rcmax/(1.0*Nbins) << "    " << Rcbins[jb] << endl;
+        outfileacRc << beta*jb*acRcmax/(1.0*Nbins) << "    " << acRcbins[jb] << endl;
+    }
+    outfileRc.close();
+    outfileacRc.close();
     
     // TT projection
     for (int jt = 0; jt < Nt; jt++) {
