@@ -2,7 +2,6 @@
 
 int main (int argc, char *argv[]) {
     
-    // input:
     // nucleation rate parameters
     const double beta = atof(argv[1]);
     const double gammapbeta = atof(argv[2]);
@@ -39,12 +38,12 @@ int main (int argc, char *argv[]) {
     double dtnuc = (tmaxnuc-tmin)/(1.0*Nt);
     double L = trange[2];
     double x1 = -L/2.0, x2 = L/2.0;
-    
+        
     // evolution of conformal time, scale factor, Hubble rate and expected number of bubbles, Nbar[jt][N,dN/dt]
     vector<vector<double> > Ft, taut, at, Ht, atau, ttau, Nb;
     averageevolution(Gamma, tmin, Nt, dtnuc, Ft, taut, at, Ht, atau, ttau, expansion);
     Nb = Nbar(Gamma, x1, x2, Ft, taut, at);
-    
+        
     // nucleate bubbles
     vector<bubble> bubbles;
     int Ntry = 0;
@@ -133,7 +132,7 @@ int main (int argc, char *argv[]) {
             
             // compute the contribution to the stress-energy tensor
             R = 0.0;
-            K = an;
+            K = 0.0;
             for (int jt = 0; jt < Nt; jt++) {
                 tau = taut[jt][1];
                 if (tau > taun) {
@@ -148,14 +147,22 @@ int main (int argc, char *argv[]) {
                     // dA = dOmega (a R)^2/a
                     dA = 4.0*PI/(a*Ns)*pow(a*R,2.0);
                                         
-                    // K = gamma*sigma/DeltaV
+                    // K = gamma*sigma/DeltaV, solve dK/dR + 2 K/R (1 + 3/2 a R H) = a or 0
                     if (R < Rc) {
-                        K = (2 - 2*exp(-3*a*H*R) - 6*a*H*R + 9*pow(a*H*R,2.0))/(27.0*H*pow(a*H*R,2.0));
+                        if (expansion == 0) {
+                            K = a*R/3.0;
+                        } else {
+                            K += (a - 2.0*K/R*(1.0+3.0/2.0*a*H*R))*dR;
+                        }
                         F[0] = K;
                         F[1] = K;
                         F[2] = K;
                     } else {
-                        K = exp(-3*a*H*(R - Rc))*(2 - 2*exp(-3*ac*Hc*Rc) - 6*ac*Hc*Rc + 9*pow(ac*Hc*Rc,2.0))/(27.0*Hc*pow(ac*Hc*R,2.0));
+                        if (expansion == 0) {
+                            K = pow(Rc/R,2.0)*ac*Rc/3.0;
+                        } else {
+                            K += -2.0*K/R*(1.0+3.0/2.0*a*H*R)*dR;
+                        }
                         F[0] = 0.0; // envelope approximation
                         F[1] = K; // bulk flow approximation
                         F[2] = K*Rc/R; // extra R_c/R dissipation
