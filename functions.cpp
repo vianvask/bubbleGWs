@@ -1,16 +1,21 @@
 #include "functions.h"
 
-// evolution of the Universe on average, accounting for the expansion of the universe
-double averageevolution_expansion(function<double(double)> Gamma, const double tmin, const int jtmax, const double dt, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at, vector<vector<double> > &Ht, vector<vector<double> > &ttau) {
+// evolution of the Universe on average, returns (k_max, t_{k_max}) with expansion and (a_p, t_p) without
+double averageevolution(function<double(double)> Gamma, const double tmin, const int jtmax, const double dt, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at, vector<vector<double> > &Ht, vector<vector<double> > &ttau, const int expansion) {
     
     // initial state in vacuum dominance:
     double t = tmin, a = exp(tmin), tau = 1.0 - exp(-tmin);
     double rhoV = 1.0, rhoV0 = 1.0, rhoR = 0.0;
-    
     double H = 1.0, F = 1.0, F0 = 1.0;
+    
+    if (expansion == 0) {
+        a = 1.0;
+        tau = tmin;
+        H = 0.0;
+    }
+    
     vector<double> tmp(2);
     double Nt, tp;
-    
     for (int jt = 0; jt < jtmax; jt++) {
         tmp[0] = t;
         tmp[1] = F;
@@ -36,6 +41,9 @@ double averageevolution_expansion(function<double(double)> Gamma, const double t
         
         // compute the scale factor and conformal time
         H = sqrt(rhoV + rhoR);
+        if (expansion == 0) {
+            H = 0.0;
+        }
         a += dt*H*a;
         tau += dt/a;
         
@@ -50,67 +58,6 @@ double averageevolution_expansion(function<double(double)> Gamma, const double t
         t += dt;
     }
     return tp;
-}
-
-// evolution of the Universe on average, neglecting the expansion of the universe
-double averageevolution_noexpansion(function<double(double)> Gamma, const double tmin, const int jtmax, const double dt, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at, vector<vector<double> > &Ht, vector<vector<double> > &ttau) {
-    
-    // initial state in vacuum dominance:
-    double t = tmin, a = 1.0, tau = tmin;
-    double rhoV = 1.0, rhoV0 = 1.0, rhoR = 0.0;
-    
-    double H = 0.0, F = 1.0, F0 = 1.0;
-    vector<double> tmp(2);
-    double Nt, tp;
-    
-    for (int jt = 0; jt < jtmax; jt++) {
-        tmp[0] = t;
-        tmp[1] = F;
-        Ft.push_back(tmp);
-        tmp[1] = H;
-        Ht.push_back(tmp);
-        tmp[1] = a;
-        at.push_back(tmp);
-        tmp[1] = tau;
-        taut.push_back(tmp);
-        
-        tmp[0] = tau;
-        tmp[1] = t;
-        ttau.push_back(tmp);
-        
-        // compute the false vacuum fraction
-        Nt = 0.0;
-        F0 = F;
-        for (int j = 0; j < taut.size(); j++) {
-            Nt += 4.0*PI/3.0*dt*Gamma(taut[j][0])*pow(at[j][1]*radius(tau,taut[j][1]), 3.0);
-        }
-        F = exp(-Nt);
-        
-        // compute the scale factor and conformal time
-        H = 0.0;
-        a += dt*H*a;
-        tau += dt/a;
-        
-        if (F > 0.3) {
-            tp = t;
-        }
-        
-        // update the energy densities
-        rhoV = F;
-        rhoR += -4.0*H*rhoR*dt - (F-F0);
-        
-        t += dt;
-    }
-    
-    return tp;
-}
-
-// evolution of the Universe on average, returns (k_max, t_{k_max}) with expansion and (a_p, t_p) without
-double averageevolution(function<double(double)> Gamma, const double tmin, const int jtmax, const double dt, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at, vector<vector<double> > &Ht, vector<vector<double> > &ttau, const int expansion) {
-    if (expansion > 0) {
-        return averageevolution_expansion(Gamma, tmin, jtmax, dt, Ft, taut, at, Ht, ttau);
-    }
-    return averageevolution_noexpansion(Gamma, tmin, jtmax, dt, Ft, taut, at, Ht, ttau);
 }
 
 // compute the distribuion of collision radii
