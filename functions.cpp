@@ -1,7 +1,7 @@
 #include "functions.h"
 
 // evolution of the Universe on average, accounting for the expansion of the universe
-vector<double> averageevolution_expansion(function<double(double)> Gamma, const double tmin, const int jtmax, const double dt, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at, vector<vector<double> > &Ht, vector<vector<double> > &ttau) {
+double averageevolution_expansion(function<double(double)> Gamma, const double tmin, const int jtmax, const double dt, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at, vector<vector<double> > &Ht, vector<vector<double> > &ttau) {
     
     // initial state in vacuum dominance:
     double t = tmin, a = exp(tmin), tau = 1.0 - exp(-tmin);
@@ -9,7 +9,7 @@ vector<double> averageevolution_expansion(function<double(double)> Gamma, const 
     
     double H = 1.0, F = 1.0, F0 = 1.0;
     vector<double> tmp(2);
-    double Nt, kmax = 0.0, tkmax;
+    double Nt, tp;
     
     for (int jt = 0; jt < jtmax; jt++) {
         tmp[0] = t;
@@ -39,9 +39,8 @@ vector<double> averageevolution_expansion(function<double(double)> Gamma, const 
         a += dt*H*a;
         tau += dt/a;
         
-        if (a*H > kmax) {
-            kmax = a*H;
-            tkmax = t;
+        if (F > 0.3) {
+            tp = t;
         }
         
         // update the energy densities
@@ -50,24 +49,11 @@ vector<double> averageevolution_expansion(function<double(double)> Gamma, const 
         
         t += dt;
     }
-    
-    // scale/shift so that a=1, H=1 and tau=0 at t=0
-    double a0 = interpolate(0.0, at);
-    double H0 = interpolate(0.0, Ht);
-    double tau0 = interpolate(0.0, taut);
-    for (int jt = 0; jt < jtmax; jt++) {
-        at[jt][1] = at[jt][1]/a0;
-        Ht[jt][1] = Ht[jt][1]/H0;
-        taut[jt][1] = taut[jt][1] - tau0;
-    }
-    tmp[0] = kmax/(a0*H0);
-    tmp[1] = tkmax;
-    
-    return tmp;
+    return tp;
 }
 
 // evolution of the Universe on average, neglecting the expansion of the universe
-vector<double> averageevolution_noexpansion(function<double(double)> Gamma, const double tmin, const int jtmax, const double dt, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at, vector<vector<double> > &Ht, vector<vector<double> > &ttau) {
+double averageevolution_noexpansion(function<double(double)> Gamma, const double tmin, const int jtmax, const double dt, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at, vector<vector<double> > &Ht, vector<vector<double> > &ttau) {
     
     // initial state in vacuum dominance:
     double t = tmin, a = 1.0, tau = tmin;
@@ -75,7 +61,7 @@ vector<double> averageevolution_noexpansion(function<double(double)> Gamma, cons
     
     double H = 0.0, F = 1.0, F0 = 1.0;
     vector<double> tmp(2);
-    double Nt, ap, tp;
+    double Nt, tp;
     
     for (int jt = 0; jt < jtmax; jt++) {
         tmp[0] = t;
@@ -106,7 +92,6 @@ vector<double> averageevolution_noexpansion(function<double(double)> Gamma, cons
         tau += dt/a;
         
         if (F > 0.3) {
-            ap = a;
             tp = t;
         }
         
@@ -117,23 +102,15 @@ vector<double> averageevolution_noexpansion(function<double(double)> Gamma, cons
         t += dt;
     }
     
-    tmp[0] = ap;
-    tmp[1] = tp;
-    
-    return tmp;
+    return tp;
 }
 
 // evolution of the Universe on average, returns (k_max, t_{k_max}) with expansion and (a_p, t_p) without
-vector<double> averageevolution(function<double(double)> Gamma, const double tmin, const int jtmax, const double dt, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at, vector<vector<double> > &Ht, vector<vector<double> > &ttau, const int expansion) {
-    
-    vector<double> tmp(2, 0.0);
+double averageevolution(function<double(double)> Gamma, const double tmin, const int jtmax, const double dt, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at, vector<vector<double> > &Ht, vector<vector<double> > &ttau, const int expansion) {
     if (expansion > 0) {
-        tmp = averageevolution_expansion(Gamma, tmin, jtmax, dt, Ft, taut, at, Ht, ttau);
-    } else {
-        tmp = averageevolution_noexpansion(Gamma, tmin, jtmax, dt, Ft, taut, at, Ht, ttau);
+        return averageevolution_expansion(Gamma, tmin, jtmax, dt, Ft, taut, at, Ht, ttau);
     }
-    
-    return tmp;
+    return averageevolution_noexpansion(Gamma, tmin, jtmax, dt, Ft, taut, at, Ht, ttau);
 }
 
 // compute the distribuion of collision radii
@@ -226,9 +203,8 @@ vector<double> findtrange(function<double(double)> Gamma, const double Nbarmin, 
     int jtmax = 8000;
     double dt = 0.001;
         
-    tmp = averageevolution(Gamma, -4.0, jtmax, dt, Ft, taut, at, Ht, ttau, expansion);
+    double tp = averageevolution(Gamma, -4.0, jtmax, dt, Ft, taut, at, Ht, ttau, expansion);
     
-    double tp = tmp[1];
     vector<vector<double> > Tt(jtmax, vector<double> (2,0.0));
     for (int jt = 0; jt < jtmax; jt++) {
         Tt[jt][0] = Ft[jt][0];
@@ -248,7 +224,7 @@ vector<double> findtrange(function<double(double)> Gamma, const double Nbarmin, 
         Nt[jt][1] = Nk[jt][1];
     }
     
-    double L = pow(Nb/interpolate(tp, Nt), 1.0/3.0); // bar{N}(t=t_p) = N_b, fixes L
+    double L = pow(Nb/Nt.back()[1], 1.0/3.0); // bar{N}(t=t_max) = N_b, fixes L
     
     trange[0] = findrootG(Nbarmin/pow(L,3.0), dt, Nt); // bar{N}(t=t_min) = barNtmin, fixes t_min
     trange[1] = tp + tfrac*L/pow(4.0*PI/3.0*Nb,1.0/3.0); // t_max = t_p + ftmax*<R>, fixes t_max

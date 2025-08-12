@@ -27,7 +27,7 @@ int main (int argc, char *argv[]) {
     int Nt = 5000; // #timesteps
     int Nk = 50; // #k values
     
-    int J = 20; // bar{N}(t=t_p) = J, fixes L
+    int J = 100; // bar{N}(t=t_p) = J, fixes L
     double barNtmin = 0.001; // bar{N}(t=t_min) = barNtmin, fixes t_min
     double ftmax = 50.0; // t_max = t_p + ftmax*<R>
     double barFtmaxnuc = 0.01; // bar{F}(t=t_max,nuc) = barFtmaxnuc, fixes t_max,nuc
@@ -156,10 +156,10 @@ int main (int argc, char *argv[]) {
             
             // add the point to the distribution of collision radii
             if (Rc < Rcmax) {
-                Rcbins[(int) floor(Nbins*Rc/Rcmax)] += pow(ac,4.0);
+                Rcbins[(int) floor(Nbins*Rc/Rcmax)] += 1.0;
             }
             if (ac*Rc < acRcmax) {
-                acRcbins[(int) floor(Nbins*ac*Rc/acRcmax)] += pow(ac,4.0);
+                acRcbins[(int) floor(Nbins*ac*Rc/acRcmax)] += 1.0;
             }
             
             // compute the contribution to the stress-energy tensor
