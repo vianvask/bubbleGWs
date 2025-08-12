@@ -152,3 +152,16 @@ double findrootG(double y, double dx, vector<vector<double> > &list) {
     return x;
 }
 
+void writeToFile(vector<vector<double> > &matrix, const string &filename) {
+    ofstream outFile(filename);
+    for (auto& row : matrix) {
+        for (int j = 0; j < row.size(); j++) {
+            outFile << row[j];
+            if (j < row.size() - 1) {
+                outFile << "   ";
+            }
+        }
+        outFile << endl;
+    }
+    outFile.close();
+}

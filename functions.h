@@ -1,12 +1,14 @@
 #include "basics.h"
 
-vector<double> averageevolution(function<double(double)> Gamma, const double tmin, const int jtmax, const double dt, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at, vector<vector<double> > &Ht, vector<vector<double> > &atau, vector<vector<double> > &ttau, const int expansion);
+vector<double> averageevolution(function<double(double)> Gamma, const double tmin, const int jtmax, const double dt, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at, vector<vector<double> > &Ht, vector<vector<double> > &ttau, const int expansion);
+
+vector<vector<double> > RcPDF(function<double(double)> Gamma, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at);
 
 vector<vector<double> > Nbar(function<double(double)> Gamma, const double x1, const double x2, const vector<vector<double> > &Ft, const vector<vector<double> > &taut, const vector<vector<double> > &at);
 
 vector<double> findtrange(function<double(double)> Gamma, const double Nbarmin, const int Nb, const double tfrac, const double Fmin, const int expansion);
 
-vector<bubble> nucleate(const double x1, const double x2, const int Nn, const vector<vector<double> > &taut, const vector<vector<double> > &at, const vector<vector<double> > &Nb, rgen &mt);
+vector<bubble> nucleate(function<double(double)> Gamma, const double x1, const double x2, const int Nn, const vector<vector<double> > &taut, const vector<vector<double> > &at, rgen &mt);
 
 double findtauc(const double x1, const double x2, const double taun, const vector<double> &xh, const vector<double> &xc, const vector<bubble> &bubbles, const int jb, const double taumax);
 

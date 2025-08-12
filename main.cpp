@@ -14,20 +14,23 @@ int main (int argc, char *argv[]) {
     clock_t time_req = clock(); // timing
     rgen mt(time(NULL)+(index+1)+beta); // random number generator
 
+    string filename;
+    ofstream outfile;
+    
     // bubble nucleation rate, units chosen such that H0 = 1
     function<double(double)> Gamma = [beta, gammapbeta](double t) {
         return exp(beta*t - pow(gammapbeta*beta*t,2.0)/2.0);
     };
     
-    int Nn = 20000; // #nucleation sites
-    int Ns = 20000; // #points on the bubble surfaces
-    int Nt = 2000; // #timesteps
+    int Nn = 10000; // #nucleation sites
+    int Ns = 10000; // #points on the bubble surfaces
+    int Nt = 5000; // #timesteps
     int Nk = 50; // #k values
     
-    int J = 50; // bar{N}(t=t_p) = J, fixes L
-    double barNtmin = 0.01; // bar{N}(t=t_min) = barNtmin, fixes t_min
-    double ftmax = 10.0; // t_max = t_p + ftmax*<R>
-    double barFtmaxnuc = 0.001; // bar{F}(t=t_max,nuc) = barFtmaxnuc, fixes t_max,nuc
+    int J = 20; // bar{N}(t=t_p) = J, fixes L
+    double barNtmin = 0.001; // bar{N}(t=t_min) = barNtmin, fixes t_min
+    double ftmax = 50.0; // t_max = t_p + ftmax*<R>
+    double barFtmaxnuc = 0.01; // bar{F}(t=t_max,nuc) = barFtmaxnuc, fixes t_max,nuc
 
     // determine the time range and simulation volume
     vector<double> trange = findtrange(Gamma, barNtmin, J, ftmax, barFtmaxnuc, expansion);
@@ -39,24 +42,41 @@ int main (int argc, char *argv[]) {
     double L = trange[2];
     double x1 = -L/2.0, x2 = L/2.0;
         
-    // evolution of conformal time, scale factor, Hubble rate and expected number of bubbles, Nbar[jt][N,dN/dt]
-    vector<vector<double> > Ft, taut, at, Ht, atau, ttau, Nb;
-    averageevolution(Gamma, tmin, Nt, dtnuc, Ft, taut, at, Ht, atau, ttau, expansion);
-    Nb = Nbar(Gamma, x1, x2, Ft, taut, at);
+    // evolution of conformal time, scale factor and Hubble rate
+    vector<vector<double> > Ft, taut, at, Ht, ttau;
+    averageevolution(Gamma, tmin, Nt, dtnuc, Ft, taut, at, Ht, ttau, expansion);
+    
+    if (index == 0) {
+        filename = "P_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(gammapbeta,2) + ".dat";
+        writeToFile(Ft, filename);
+        
+        filename = "a_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(gammapbeta,2) + ".dat";
+        writeToFile(at, filename);
+        
+        filename = "tau_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(gammapbeta,2) + ".dat";
+        writeToFile(taut, filename);
+        
+        filename = "H_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(gammapbeta,2) + ".dat";
+        writeToFile(Ht, filename);
+        
+        vector<vector<double> > pRc = RcPDF(Gamma, Ft, taut, at);
+        filename = "pRc_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(gammapbeta,2) + ".dat";
+        writeToFile(pRc, filename);
+    }
         
     // nucleate bubbles
     vector<bubble> bubbles;
     int Ntry = 0;
-    while ((bubbles.size() < 10 || bubbles.size() > J) && Ntry < 100) {
-        bubbles = nucleate(x1, x2, Nn, taut, at, Nb, mt);
+    while ((bubbles.size() < J/2.0 || bubbles.size() > 2.0*J) && Ntry < 100) {
+        bubbles = nucleate(Gamma, x1, x2, Nn, taut, at, mt);
         cout << bubbles.size() << endl;
         Ntry++;
     }
     cout << "#bubbles = " << bubbles.size() << endl;
     
     // recompute the background evolution with up to larger times with a larger dt
-    Ft.clear(); taut.clear(); at.clear(); Ht.clear(); atau.clear(); ttau.clear();
-    averageevolution(Gamma, tmin, Nt, dt, Ft, taut, at, Ht, atau, ttau, expansion);
+    Ft.clear(); taut.clear(); at.clear(); Ht.clear(); ttau.clear();
+    averageevolution(Gamma, tmin, Nt, dt, Ft, taut, at, Ht, ttau, expansion);
     double taumax = taut[taut.size()-1][1];
     
     // generate a list of k values in log scale
@@ -85,13 +105,12 @@ int main (int argc, char *argv[]) {
     vector<vector<vector<vector<vector<complex<double> > > > > > T(Nt, vector<vector<vector<vector<complex<double> > > > > (Nkhat, vector<vector<vector<complex<double> > > > (Nk, vector<vector<complex<double> > > (Na, vector<complex<double> > (6, zero)))));
     
     // file for collision times on the surface of the first bubble
-    string filename = "B_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(gammapbeta,2) + "_j_" + to_string(index) + ".dat";
-    ofstream outfileB;
-    outfileB.open(filename.c_str());
+    filename = "B_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(gammapbeta,2) + "_j_" + to_string(index) + ".dat";
+    outfile.open(filename.c_str());
     
     // initialize binning of the collision radius
-    const int Nbins = 100;
-    const double Rcmax = 4.0/beta, acRcmax = 4.0/beta;
+    const int Nbins = 1000;
+    const double Rcmax = 20.0/beta, acRcmax = 20.0/beta;
     vector<double> Rcbins(Nbins, 0.0), acRcbins(Nbins, 0.0);
     
     double tau, taun, tauc, t, tc, a, an, ac, H, Hc, R, dR, Rc, dA, theta, phi, K;
@@ -132,15 +151,15 @@ int main (int argc, char *argv[]) {
                 if (sqrt(xh[0]*xh[0]+xh[1]*xh[1]) > 0) {
                     phi = sgn(xh[1])*acos(xh[0]/sqrt(xh[0]*xh[0]+xh[1]*xh[1]));
                 }
-                outfileB << theta << "   " << phi << "   " << Rc << "   " << ac << endl;
+                outfile << theta << "   " << phi << "   " << Rc << "   " << ac << endl;
             }
             
             // add the point to the distribution of collision radii
             if (Rc < Rcmax) {
-                Rcbins[(int) floor(Nbins*Rc/Rcmax)] += ac*ac;
+                Rcbins[(int) floor(Nbins*Rc/Rcmax)] += pow(ac,4.0);
             }
             if (ac*Rc < acRcmax) {
-                acRcbins[(int) floor(Nbins*ac*Rc/acRcmax)] += ac*ac;
+                acRcbins[(int) floor(Nbins*ac*Rc/acRcmax)] += pow(ac,4.0);
             }
             
             // compute the contribution to the stress-energy tensor
@@ -196,7 +215,7 @@ int main (int argc, char *argv[]) {
             }
         }
     }
-    outfileB.close();
+    outfile.close();
     
     // output the R_c and a_c R_c distributions
     ofstream outfileRc, outfileacRc;
@@ -333,7 +352,7 @@ int main (int argc, char *argv[]) {
         outfileOmegafin << k/beta << "    " << Omega[0] << "    " << Omega[1] << "    " << Omega[2] << endl;
     }
     outfileOmegafin.close();
-    
+     
     time_req = clock() - time_req;
     cout << "total evaluation time: " << ((double) time_req/CLOCKS_PER_SEC/60.0) << " minutes." << endl;
     return 0;

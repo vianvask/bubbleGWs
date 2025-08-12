@@ -1,7 +1,7 @@
 #include "functions.h"
 
 // evolution of the Universe on average, accounting for the expansion of the universe
-vector<double> averageevolution_expansion(function<double(double)> Gamma, const double tmin, const int jtmax, const double dt, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at, vector<vector<double> > &Ht, vector<vector<double> > &atau, vector<vector<double> > &ttau) {
+vector<double> averageevolution_expansion(function<double(double)> Gamma, const double tmin, const int jtmax, const double dt, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at, vector<vector<double> > &Ht, vector<vector<double> > &ttau) {
     
     // initial state in vacuum dominance:
     double t = tmin, a = exp(tmin), tau = 1.0 - exp(-tmin);
@@ -23,12 +23,10 @@ vector<double> averageevolution_expansion(function<double(double)> Gamma, const 
         taut.push_back(tmp);
         
         tmp[0] = tau;
-        tmp[1] = a;
-        atau.push_back(tmp);
         tmp[1] = t;
         ttau.push_back(tmp);
         
-        //calculate the false vacuum fraction
+        // compute the false vacuum fraction
         Nt = 0.0;
         F0 = F;
         for (int j = 0; j < taut.size(); j++) {
@@ -53,14 +51,23 @@ vector<double> averageevolution_expansion(function<double(double)> Gamma, const 
         t += dt;
     }
     
-    tmp[0] = kmax;
+    // scale/shift so that a=1, H=1 and tau=0 at t=0
+    double a0 = interpolate(0.0, at);
+    double H0 = interpolate(0.0, Ht);
+    double tau0 = interpolate(0.0, taut);
+    for (int jt = 0; jt < jtmax; jt++) {
+        at[jt][1] = at[jt][1]/a0;
+        Ht[jt][1] = Ht[jt][1]/H0;
+        taut[jt][1] = taut[jt][1] - tau0;
+    }
+    tmp[0] = kmax/(a0*H0);
     tmp[1] = tkmax;
     
     return tmp;
 }
 
 // evolution of the Universe on average, neglecting the expansion of the universe
-vector<double> averageevolution_noexpansion(function<double(double)> Gamma, const double tmin, const int jtmax, const double dt, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at, vector<vector<double> > &Ht, vector<vector<double> > &atau, vector<vector<double> > &ttau) {
+vector<double> averageevolution_noexpansion(function<double(double)> Gamma, const double tmin, const int jtmax, const double dt, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at, vector<vector<double> > &Ht, vector<vector<double> > &ttau) {
     
     // initial state in vacuum dominance:
     double t = tmin, a = 1.0, tau = tmin;
@@ -82,12 +89,10 @@ vector<double> averageevolution_noexpansion(function<double(double)> Gamma, cons
         taut.push_back(tmp);
         
         tmp[0] = tau;
-        tmp[1] = a;
-        atau.push_back(tmp);
         tmp[1] = t;
         ttau.push_back(tmp);
         
-        //calculate the false vacuum fraction
+        // compute the false vacuum fraction
         Nt = 0.0;
         F0 = F;
         for (int j = 0; j < taut.size(); j++) {
@@ -119,34 +124,87 @@ vector<double> averageevolution_noexpansion(function<double(double)> Gamma, cons
 }
 
 // evolution of the Universe on average, returns (k_max, t_{k_max}) with expansion and (a_p, t_p) without
-vector<double> averageevolution(function<double(double)> Gamma, const double tmin, const int jtmax, const double dt, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at, vector<vector<double> > &Ht, vector<vector<double> > &atau, vector<vector<double> > &ttau, const int expansion) {
+vector<double> averageevolution(function<double(double)> Gamma, const double tmin, const int jtmax, const double dt, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at, vector<vector<double> > &Ht, vector<vector<double> > &ttau, const int expansion) {
     
     vector<double> tmp(2, 0.0);
     if (expansion > 0) {
-        tmp = averageevolution_expansion(Gamma, tmin, jtmax, dt, Ft, taut, at, Ht, atau, ttau);
+        tmp = averageevolution_expansion(Gamma, tmin, jtmax, dt, Ft, taut, at, Ht, ttau);
     } else {
-        tmp = averageevolution_noexpansion(Gamma, tmin, jtmax, dt, Ft, taut, at, Ht, atau, ttau);
+        tmp = averageevolution_noexpansion(Gamma, tmin, jtmax, dt, Ft, taut, at, Ht, ttau);
     }
     
     return tmp;
 }
+
+// compute the distribuion of collision radii
+vector<vector<double> > RcPDF(function<double(double)> Gamma, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at) {
+    vector<vector<double> > pRc(50000, vector<double> (2,0.0));
+    double dR = (taut.back()[1] - taut.front()[1])/(1.0*pRc.size());
+    
+    // compute the time derivative of F
+    const double dt = at[1][0] - at[0][0];
+    vector<vector<double> > DFtau(Ft.size(), vector<double> (2,0.0));
+    DFtau[0][0] = taut[0][1];
+    for (int jt = 1; jt < at.size(); jt++) {
+        DFtau[jt][0] = taut[jt][1];
+        DFtau[jt][1] = (Ft[jt][1] - Ft[jt-1][1])/dt;
+    }
+    vector<vector<double> > Ftau(at.size(), vector<double> (2,0.0));
+    vector<vector<double> > atau(at.size(), vector<double> (2,0.0));
+    for (int jt = 0; jt < at.size(); jt++) {
+        Ftau[jt][0] = taut[jt][1];
+        Ftau[jt][1] = Ft[jt][1];
+        
+        atau[jt][0] = taut[jt][1];
+        atau[jt][1] = at[jt][1];
+    }
+    
+    double Rc, tn, an, etan, p, norm = 0.0;
+    for (int jR = 0; jR < pRc.size(); jR++) {
+        Rc = jR*dR;
+        
+        // compute integral over time
+        p = 0.0;
+        for (int jt = 0; jt < at.size()-1; jt++) {
+            tn = at[jt][0];
+            an = at[jt][1];
+            etan = taut[jt][1];
+            
+            if (etan + Rc < DFtau.back()[0]) {
+                p += -pow(an,3.0)*Gamma(tn)*interpolate(etan + Rc, atau)*interpolate(etan + Rc, Ftau)*interpolate(etan + Rc, DFtau)*dt;
+            }
+        }
+        
+        pRc[jR][0] = Rc;
+        pRc[jR][1] = p;
+        
+        norm += p*dR;
+    }
+    
+    // normalize
+    for (int jR = 0; jR < pRc.size(); jR++) {
+        pRc[jR][1] = pRc[jR][1]/norm;
+    }
+    
+    return pRc;
+}
+
 
 // expected number of bubbles nucleated in cube [x_1,x_2]^3
 vector<vector<double> > Nbar(function<double(double)> Gamma, const double x1, const double x2, const vector<vector<double> > &Ft, const vector<vector<double> > &taut, const vector<vector<double> > &at) {
     
     const double dt = at[1][0] - at[0][0];
     
-    double t, tau, Np, N = 0.0;
+    double t, Np, N = 0.0;
     vector<double> tmp(3);
     vector<vector<double> > Nt;
     for (int jt = 0; jt < at.size(); jt++) {
         t = at[jt][0];
-        tau = taut[jt][1];
         
         Np = N;
         N = 0.0;
         for (int j = 0; j < jt; j++) {
-            N += 4.0*PI/3.0*dt*Gamma(taut[j][0])*pow(at[j][1]*(x2-x1),3.0);
+            N += dt*Ft[j][1]*Gamma(at[j][0])*pow(at[j][1]*(x2-x1),3.0);
         }
         
         tmp[0] = t;
@@ -162,13 +220,13 @@ vector<vector<double> > Nbar(function<double(double)> Gamma, const double x1, co
 vector<double> findtrange(function<double(double)> Gamma, const double Nbarmin, const int Nb, const double tfrac, const double Fmin, const int expansion) {
     vector<double> trange(4);
     
-    vector<vector<double> > Ft, taut, at, Ht, atau, ttau;
+    vector<vector<double> > Ft, taut, at, Ht, ttau;
     vector<double> tmp(2);
     
-    int jtmax = 6000;
+    int jtmax = 8000;
     double dt = 0.001;
         
-    tmp = averageevolution(Gamma, -3.0, jtmax, dt, Ft, taut, at, Ht, atau, ttau, expansion);
+    tmp = averageevolution(Gamma, -4.0, jtmax, dt, Ft, taut, at, Ht, ttau, expansion);
     
     double tp = tmp[1];
     vector<vector<double> > Tt(jtmax, vector<double> (2,0.0));
@@ -180,7 +238,9 @@ vector<double> findtrange(function<double(double)> Gamma, const double Nbarmin, 
     vector<vector<double> > Nk = Nbar(Gamma, -0.5, 0.5, Ft, taut, at);
     int jtmaxnum = 0;
     for (int jt = 0; jt < jtmax; jt++) {
-        if(isfinite(Nk[jt][1])){jtmaxnum+=1;}
+        if (isfinite(Nk[jt][1])) {
+            jtmaxnum += 1;
+        }
     }
     vector<vector<double> > Nt(jtmaxnum, vector<double> (2,0.0));
     for (int jt = 0; jt < jtmaxnum; jt++) {
@@ -193,15 +253,15 @@ vector<double> findtrange(function<double(double)> Gamma, const double Nbarmin, 
     trange[0] = findrootG(Nbarmin/pow(L,3.0), dt, Nt); // bar{N}(t=t_min) = barNtmin, fixes t_min
     trange[1] = tp + tfrac*L/pow(4.0*PI/3.0*Nb,1.0/3.0); // t_max = t_p + ftmax*<R>, fixes t_max
     trange[2] = L;
-    trange[3] = findrootG(1.0-Fmin, dt, Tt); // bar{F}(t=t_max,nuc) = barFtmaxnuc, fixes t_max, nuc
+    trange[3] = findrootG(1.0-Fmin, dt, Tt); // bar{F}(t=t_max,nuc) = barFtmaxnuc, fixes t_max,nuc
     
     return trange;
 }
 
 // nucleates bubbles
-vector<bubble> nucleate(const double x1, const double x2, const int Nn, const vector<vector<double> > &taut, const vector<vector<double> > &at, const vector<vector<double> > &Nb, rgen &mt) {
+vector<bubble> nucleate(function<double(double)> Gamma, const double x1, const double x2, const int Nn, const vector<vector<double> > &taut, const vector<vector<double> > &at, rgen &mt) {
     const double dt = taut[1][0] - taut[0][0];
-    bool toohighprob=false;
+    
     // generate list of nucleation sites
     vector<vector<double> > xlist(Nn, vector<double> (3, 0.0));
     for (int j = 0; j < Nn; j++) {
@@ -212,25 +272,29 @@ vector<bubble> nucleate(const double x1, const double x2, const int Nn, const ve
     
     bubble b0;
     vector<bubble> bubbles;
-    double taun, an;
+    double tn, taun, an;
     vector<double> xc(3, 0.0);
     
     // nucleate bubbles
     int Ntry = 0;
-    const double fV = 1.0/(1.0*Nn);
-    bool flag;
+    const double dVcf = pow(x2-x1,3.0)/(1.0*Nn);
+    bool flag, toohighprob = false;
+    double dN;
     for (int jt = 0; jt < taut.size(); jt++) {
+        tn = taut[jt][0];
         taun = taut[jt][1];
         an = at[jt][1];
         for (int j = 0; j < Nn; j++) {
             xc = xlist[j];
-            if (fV*dt*Nb[jt][2] > 1.0) {
-                toohighprob=true; 
+            
+            dN = dVcf*dt*Gamma(tn)*pow(an,3.0);
+            if (dN > 1.0) {
+                toohighprob = true;
             }
             
             // try to nucleate a bubble
-            if (fV*dt*Nb[jt][2] > randomreal(0.0,1.0,mt)) {
-                
+            if (dN > randomreal(0.0,1.0,mt)) {
+                                
                 // check if the bubble is inside another bubble
                 flag = true;
                 for (int jb = 0; jb < bubbles.size(); jb++) {
