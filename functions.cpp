@@ -15,7 +15,7 @@ double averageevolution(function<double(double)> Gamma, const double tmin, const
     }
     
     vector<double> tmp(2);
-    double Nt, tp;
+    double It, tp;
     for (int jt = 0; jt < jtmax; jt++) {
         tmp[0] = t;
         tmp[1] = F;
@@ -32,12 +32,12 @@ double averageevolution(function<double(double)> Gamma, const double tmin, const
         ttau.push_back(tmp);
         
         // compute the false vacuum fraction
-        Nt = 0.0;
+        It = 0.0;
         F0 = F;
         for (int j = 0; j < taut.size(); j++) {
-            Nt += 4.0*PI/3.0*dt*Gamma(taut[j][0])*pow(at[j][1]*radius(tau,taut[j][1]), 3.0);
+            It += 4.0*PI/3.0*dt*Gamma(at[j][0])*pow(at[j][1]*radius(tau, taut[j][1]), 3.0);
         }
-        F = exp(-Nt);
+        F = exp(-It);
         
         // compute the scale factor and conformal time
         H = sqrt(rhoV + rhoR);
@@ -119,56 +119,36 @@ vector<vector<double> > Nbar(function<double(double)> Gamma, const double x1, co
     
     const double dt = at[1][0] - at[0][0];
     
-    double t, Np, N = 0.0;
-    vector<double> tmp(3);
+    double t, N = 0.0;
+    vector<double> tmp(2);
     vector<vector<double> > Nt;
     for (int jt = 0; jt < at.size(); jt++) {
         t = at[jt][0];
-        
-        Np = N;
-        N = 0.0;
-        for (int j = 0; j < jt; j++) {
-            N += dt*Ft[j][1]*Gamma(at[j][0])*pow(at[j][1]*(x2-x1),3.0);
-        }
+        N += dt*Ft[jt][1]*Gamma(t)*pow(at[jt][1]*(x2-x1),3.0);
         
         tmp[0] = t;
         tmp[1] = N;
-        tmp[2] = (N-Np)/dt;
         Nt.push_back(tmp);
     }
-    
     return Nt;
 }
 
 // finds the time range where the computation should be performed as well as the simulation boundaries
 vector<double> findtrange(function<double(double)> Gamma, const double Nbarmin, const int Nb, const double tfrac, const double Fmin, const int expansion) {
     vector<double> trange(4);
-    
-    vector<vector<double> > Ft, taut, at, Ht, ttau;
-    vector<double> tmp(2);
-    
+        
     int jtmax = 8000;
     double dt = 0.001;
-        
+    
+    vector<vector<double> > Ft, taut, at, Ht, ttau;
     double tp = averageevolution(Gamma, -4.0, jtmax, dt, Ft, taut, at, Ht, ttau, expansion);
+    
+    vector<vector<double> > Nt = Nbar(Gamma, -0.5, 0.5, Ft, taut, at);
     
     vector<vector<double> > Tt(jtmax, vector<double> (2,0.0));
     for (int jt = 0; jt < jtmax; jt++) {
         Tt[jt][0] = Ft[jt][0];
-        Tt[jt][1] = 1-Ft[jt][1];
-    }
-
-    vector<vector<double> > Nk = Nbar(Gamma, -0.5, 0.5, Ft, taut, at);
-    int jtmaxnum = 0;
-    for (int jt = 0; jt < jtmax; jt++) {
-        if (isfinite(Nk[jt][1])) {
-            jtmaxnum += 1;
-        }
-    }
-    vector<vector<double> > Nt(jtmaxnum, vector<double> (2,0.0));
-    for (int jt = 0; jt < jtmaxnum; jt++) {
-        Nt[jt][0] = Nk[jt][0];
-        Nt[jt][1] = Nk[jt][1];
+        Tt[jt][1] = 1.0-Ft[jt][1];
     }
     
     double L = pow(Nb/Nt.back()[1], 1.0/3.0); // bar{N}(t=t_max) = N_b, fixes L
@@ -195,14 +175,12 @@ vector<bubble> nucleate(function<double(double)> Gamma, const double x1, const d
     
     bubble b0;
     vector<bubble> bubbles;
-    double tn, taun, an;
-    vector<double> xc(3, 0.0);
     
     // nucleate bubbles
-    int Ntry = 0;
     const double dVcf = pow(x2-x1,3.0)/(1.0*Nn);
-    bool flag, toohighprob = false;
-    double dN;
+    bool infalsevacuum, toohighprob = false;
+    double tn, taun, an, dN;
+    vector<double> xc(3, 0.0);
     for (int jt = 0; jt < taut.size(); jt++) {
         tn = taut[jt][0];
         taun = taut[jt][1];
@@ -219,16 +197,16 @@ vector<bubble> nucleate(function<double(double)> Gamma, const double x1, const d
             if (dN > randomreal(0.0,1.0,mt)) {
                                 
                 // check if the bubble is inside another bubble
-                flag = true;
+                infalsevacuum = true;
                 for (int jb = 0; jb < bubbles.size(); jb++) {
                     if (distance(xc, bubbles[jb].x, x1, x2) < radius(taun, bubbles[jb].tau)) {
-                        flag = false;
+                        infalsevacuum = false;
                         jb = bubbles.size();
                     }
                 }
                 
                 // nucleate the bubble only if it is not inside another bubble
-                if (flag) {
+                if (infalsevacuum) {
                     b0.x = xc;
                     b0.tau = taun;
                     b0.a = an;

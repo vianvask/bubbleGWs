@@ -23,15 +23,15 @@ int main (int argc, char *argv[]) {
     };
     
     int Nn = 10000; // #nucleation sites
-    int Ns = 10000; // #points on the bubble surfaces
-    int Nt = 5000; // #timesteps
+    int Ns = 4000; // #points on the bubble surfaces
+    int Nt = 4000; // #timesteps
     int Nk = 50; // #k values
     
-    int J = 100; // bar{N}(t=t_p) = J, fixes L
+    int J = 40; // bar{N}(t=t_p) = J, fixes L
     double barNtmin = 0.001; // bar{N}(t=t_min) = barNtmin, fixes t_min
-    double ftmax = 50.0; // t_max = t_p + ftmax*<R>
-    double barFtmaxnuc = 0.01; // bar{F}(t=t_max,nuc) = barFtmaxnuc, fixes t_max,nuc
-
+    double ftmax = 100.0; // t_max = t_p + ftmax*<R>
+    double barFtmaxnuc = 0.001; // bar{F}(t=t_max,nuc) = barFtmaxnuc, fixes t_max,nuc
+    
     // determine the time range and simulation volume
     vector<double> trange = findtrange(Gamma, barNtmin, J, ftmax, barFtmaxnuc, expansion);
     double tmin = trange[0];
@@ -41,7 +41,7 @@ int main (int argc, char *argv[]) {
     double dtnuc = (tmaxnuc-tmin)/(1.0*Nt);
     double L = trange[2];
     double x1 = -L/2.0, x2 = L/2.0;
-        
+    
     // evolution of conformal time, scale factor and Hubble rate
     vector<vector<double> > Ft, taut, at, Ht, ttau;
     averageevolution(Gamma, tmin, Nt, dtnuc, Ft, taut, at, Ht, ttau, expansion);
@@ -63,7 +63,7 @@ int main (int argc, char *argv[]) {
         filename = "pRc_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(gammapbeta,2) + ".dat";
         writeToFile(pRc, filename);
     }
-        
+    
     // nucleate bubbles
     vector<bubble> bubbles;
     int Ntry = 0;
@@ -110,7 +110,7 @@ int main (int argc, char *argv[]) {
     
     // initialize binning of the collision radius
     const int Nbins = 1000;
-    const double Rcmax = 20.0/beta, acRcmax = 20.0/beta;
+    const double Rcmax = 10.0/beta, acRcmax = 10.0/beta;
     vector<double> Rcbins(Nbins, 0.0), acRcbins(Nbins, 0.0);
     
     double tau, taun, tauc, t, tc, a, an, ac, H, Hc, R, dR, Rc, dA, theta, phi, K;
@@ -161,7 +161,7 @@ int main (int argc, char *argv[]) {
             if (ac*Rc < acRcmax) {
                 acRcbins[(int) floor(Nbins*ac*Rc/acRcmax)] += 1.0;
             }
-            
+                        
             // compute the contribution to the stress-energy tensor
             R = 0.0;
             K = 0.0;
@@ -229,7 +229,7 @@ int main (int argc, char *argv[]) {
     }
     outfileRc.close();
     outfileacRc.close();
-    
+        
     // TT projection
     for (int jt = 0; jt < Nt; jt++) {
         for (int jk = 0; jk < Nk; jk++) {
@@ -352,7 +352,7 @@ int main (int argc, char *argv[]) {
         outfileOmegafin << k/beta << "    " << Omega[0] << "    " << Omega[1] << "    " << Omega[2] << endl;
     }
     outfileOmegafin.close();
-     
+    
     time_req = clock() - time_req;
     cout << "total evaluation time: " << ((double) time_req/CLOCKS_PER_SEC/60.0) << " minutes." << endl;
     return 0;
