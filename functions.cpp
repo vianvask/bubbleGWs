@@ -60,7 +60,7 @@ double averageevolution(function<double(double)> Gamma, const double tmin, const
     return tp;
 }
 
-// compute the distribuion of collision radii
+// compute the distribution of collision radii
 vector<vector<double> > RcPDF(function<double(double)> Gamma, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at) {
     vector<vector<double> > pRc(50000, vector<double> (2,0.0));
     double dR = (taut.back()[1] - taut.front()[1])/(1.0*pRc.size());
@@ -137,7 +137,7 @@ vector<vector<double> > Nbar(function<double(double)> Gamma, const double x1, co
 vector<double> findtrange(function<double(double)> Gamma, const double Nbarmin, const int Nb, const double tfrac, const double Fmin, const int expansion) {
     vector<double> trange(4);
         
-    int jtmax = 8000;
+    int jtmax = 10000;
     double dt = 0.001;
     
     vector<vector<double> > Ft, taut, at, Ht, ttau;
@@ -156,7 +156,7 @@ vector<double> findtrange(function<double(double)> Gamma, const double Nbarmin, 
     trange[0] = findrootG(Nbarmin/pow(L,3.0), dt, Nt); // bar{N}(t=t_min) = barNtmin, fixes t_min
     trange[1] = tp + tfrac*L/pow(4.0*PI/3.0*Nb,1.0/3.0); // t_max = t_p + ftmax*<R>, fixes t_max
     trange[2] = L;
-    trange[3] = findrootG(1.0-Fmin, dt, Tt); // bar{F}(t=t_max,nuc) = barFtmaxnuc, fixes t_max,nuc
+    trange[3] = findrootG(1.0-Fmin, dt, Tt); // bar{F}(t=t_max,nuc) = Fmin, fixes t_max,nuc
     
     return trange;
 }
@@ -188,7 +188,7 @@ vector<bubble> nucleate(function<double(double)> Gamma, const double x1, const d
         for (int j = 0; j < Nn; j++) {
             xc = xlist[j];
             
-            dN = dVcf*dt*Gamma(tn)*pow(an,3.0);
+            dN = dt*Gamma(tn)*pow(an,3.0)*dVcf;
             if (dN > 1.0) {
                 toohighprob = true;
             }
@@ -361,4 +361,3 @@ vector<complex<double> > TTprojection6(const vector<complex<double> > &X, const 
     
     return Z;
 }
-

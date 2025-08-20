@@ -27,19 +27,20 @@ int main (int argc, char *argv[]) {
     int Nt = 4000; // #timesteps
     int Nk = 50; // #k values
     
-    int J = 40; // bar{N}(t=t_p) = J, fixes L
-    double barNtmin = 0.001; // bar{N}(t=t_min) = barNtmin, fixes t_min
+    int J = 40; // bar{N}(t=t_max) = J, fixes L
+    double barNtmin = 0.0001; // bar{N}(t=t_min) = barNtmin, fixes t_min
     double ftmax = 100.0; // t_max = t_p + ftmax*<R>
-    double barFtmaxnuc = 0.001; // bar{F}(t=t_max,nuc) = barFtmaxnuc, fixes t_max,nuc
+    double Fmin = 0.0001; // bar{F}(t=t_max,nuc) = barFtmaxnuc, fixes t_max,nuc
     
     // determine the time range and simulation volume
-    vector<double> trange = findtrange(Gamma, barNtmin, J, ftmax, barFtmaxnuc, expansion);
+    vector<double> trange = findtrange(Gamma, barNtmin, J, ftmax, Fmin, expansion);
     double tmin = trange[0];
     double tmax = trange[1];
-    double dt = (tmax-tmin)/(1.0*Nt);
-    double tmaxnuc = min(trange[3],tmax);
-    double dtnuc = (tmaxnuc-tmin)/(1.0*Nt);
     double L = trange[2];
+    double tmaxnuc = min(trange[3],tmax);
+    
+    double dt = (tmax-tmin)/(1.0*Nt);
+    double dtnuc = (tmaxnuc-tmin)/(1.0*Nt);
     double x1 = -L/2.0, x2 = L/2.0;
     
     // evolution of conformal time, scale factor and Hubble rate
