@@ -305,22 +305,36 @@ int main (int argc, char *argv[]) {
         } else {
             Theta = dtheta*3.0/(16.0*pow(PI*L,3.0));
         }
+        
         OmegaTot = zeroNa;
         for (int jk = 0; jk < Nk; jk++) {
             k = klist[jk];
+            outfileOmega << t << "   " << k/beta << "    ";
+            
             Omega = zeroNa;
             for (int ja = 0; ja < Na; ja++) {
+                // integrate over k directions
                 for (int jd = 0; jd < Nkhat; jd++) {
+                    // sum over components of u
                     for (int j6 = 0; j6 < 6; j6++) {
                         du0 = du[jt][jd][jk][ja][j6];
                         Omega[ja] += pow(k,3.0)*Theta*j6coef[j6]*pow(abs(du0),2.0);
                     }
-                    OmegaTot[ja] += dlogk*Omega[ja];
                 }
+                outfileOmega <<  Omega[ja] << "    ";
+                
+                // integrated over k to get total Omega
+                OmegaTot[ja] += dlogk*Omega[ja];
             }
-            outfileOmega << t << "   " << k/beta << "    " << Omega[0] << "    " << Omega[1] << "    " << Omega[2] << endl;
+            outfileOmega << endl;
         }
-        outfileOmegaTot << t << "    " << a << "    " << OmegaTot[0] << "    " << OmegaTot[1] << "    " << OmegaTot[2] << endl;
+        
+        // output total Omega
+        outfileOmegaTot << t << "    " << a << "    ";
+        for (int ja = 0; ja < Na; ja++) {
+            outfileOmegaTot <<  OmegaTot[ja] << "    ";
+        }
+        outfileOmegaTot << endl;
     }
     outfileOmega.close();
     outfileOmegaTot.close();
