@@ -60,60 +60,6 @@ double averageevolution(function<double(double)> Gamma, const double tmin, const
     return tp;
 }
 
-// compute the distribution of collision radii
-vector<vector<double> > RcPDF(function<double(double)> Gamma, vector<vector<double> > &Ft, vector<vector<double> > &taut, vector<vector<double> > &at) {
-    vector<vector<double> > pRc(50000, vector<double> (2,0.0));
-    double dR = (taut.back()[1] - taut.front()[1])/(1.0*pRc.size());
-    
-    // compute the time derivative of F
-    const double dt = at[1][0] - at[0][0];
-    vector<vector<double> > DFtau(Ft.size(), vector<double> (2,0.0));
-    DFtau[0][0] = taut[0][1];
-    for (int jt = 1; jt < at.size(); jt++) {
-        DFtau[jt][0] = taut[jt][1];
-        DFtau[jt][1] = (Ft[jt][1] - Ft[jt-1][1])/dt;
-    }
-    vector<vector<double> > Ftau(at.size(), vector<double> (2,0.0));
-    vector<vector<double> > atau(at.size(), vector<double> (2,0.0));
-    for (int jt = 0; jt < at.size(); jt++) {
-        Ftau[jt][0] = taut[jt][1];
-        Ftau[jt][1] = Ft[jt][1];
-        
-        atau[jt][0] = taut[jt][1];
-        atau[jt][1] = at[jt][1];
-    }
-    
-    double Rc, tn, an, etan, p, norm = 0.0;
-    for (int jR = 0; jR < pRc.size(); jR++) {
-        Rc = jR*dR;
-        
-        // compute integral over time
-        p = 0.0;
-        for (int jt = 0; jt < at.size()-1; jt++) {
-            tn = at[jt][0];
-            an = at[jt][1];
-            etan = taut[jt][1];
-            
-            if (etan + Rc < DFtau.back()[0]) {
-                p += -pow(an,3.0)*Gamma(tn)*interpolate(etan + Rc, atau)*interpolate(etan + Rc, Ftau)*interpolate(etan + Rc, DFtau)*dt;
-            }
-        }
-        
-        pRc[jR][0] = Rc;
-        pRc[jR][1] = p;
-        
-        norm += p*dR;
-    }
-    
-    // normalize
-    for (int jR = 0; jR < pRc.size(); jR++) {
-        pRc[jR][1] = pRc[jR][1]/norm;
-    }
-    
-    return pRc;
-}
-
-
 // expected number of bubbles nucleated in cube [x_1,x_2]^3
 vector<vector<double> > Nbar(function<double(double)> Gamma, const double x1, const double x2, const vector<vector<double> > &Ft, const vector<vector<double> > &taut, const vector<vector<double> > &at) {
     

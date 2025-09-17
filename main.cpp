@@ -1,35 +1,31 @@
 #include "functions.h"
 
 int main (int argc, char *argv[]) {
-    
-    // nucleation rate parameters
-    const double beta = atof(argv[1]);
-    const double gammapbeta = atof(argv[2]);
-    // file naming
-    const int index = atoi(argv[3]);
-    // 0: static Minkowski space, 1: FLRW space with transition from vacuum to radiation dominance
-    const int expansion = atoi(argv[4]);
-    
     cout << setprecision(5) << fixed;
     clock_t time_req = clock(); // timing
-    rgen mt(time(NULL)+(index+1)+beta); // random number generator
+    
+    const double beta = atof(argv[1]);
+    const int index = atoi(argv[2]);
+    const int expansion = atoi(argv[3]); // 0: static Minkowski space, 1: FLRW space
 
+    rgen mt(time(NULL)+(index+1)+beta); // random number generator
+    
     string filename;
     ofstream outfile;
     
     // bubble nucleation rate, units chosen such that H0 = 1
-    function<double(double)> Gamma = [beta, gammapbeta](double t) {
-        return exp(beta*t - pow(gammapbeta*beta*t,2.0)/2.0);
+    function<double(double)> Gamma = [beta](double t) {
+        return exp(beta*t);
     };
     
-    int Nn = 10000; // #nucleation sites
-    int Ns = 4000; // #points on the bubble surfaces
-    int Nt = 4000; // #timesteps
+    int Nn = 20000; // #nucleation sites
+    int Ns = 5000; // #points on the bubble surfaces
+    int Nt = 5000; // #timesteps
     int Nk = 50; // #k values
     
-    int J = 40; // bar{N}(t=t_max) = J, fixes L
+    int J = 100; // bar{N}(t=t_max) = J, fixes L
     double barNtmin = 0.0001; // bar{N}(t=t_min) = barNtmin, fixes t_min
-    double ftmax = 100.0; // t_max = t_p + ftmax*<R>
+    double ftmax = 50.0; // t_max = t_p + ftmax*<R>
     double Fmin = 0.0001; // bar{F}(t=t_max,nuc) = barFtmaxnuc, fixes t_max,nuc
     
     // determine the time range and simulation volume
@@ -47,28 +43,25 @@ int main (int argc, char *argv[]) {
     vector<vector<double> > Ft, taut, at, Ht, ttau;
     averageevolution(Gamma, tmin, Nt, dtnuc, Ft, taut, at, Ht, ttau, expansion);
     
-    if (index == 0) {
-        filename = "P_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(gammapbeta,2) + ".dat";
+    // output background evolution
+    if (index == 0 && expansion == 1) {
+        filename = "P_beta_" + to_string_prec(beta,2) + ".dat";
         writeToFile(Ft, filename);
         
-        filename = "a_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(gammapbeta,2) + ".dat";
+        filename = "a_beta_" + to_string_prec(beta,2) + ".dat";
         writeToFile(at, filename);
         
-        filename = "tau_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(gammapbeta,2) + ".dat";
+        filename = "tau_beta_" + to_string_prec(beta,2) + ".dat";
         writeToFile(taut, filename);
         
-        filename = "H_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(gammapbeta,2) + ".dat";
+        filename = "H_beta_" + to_string_prec(beta,2) + ".dat";
         writeToFile(Ht, filename);
-        
-        vector<vector<double> > pRc = RcPDF(Gamma, Ft, taut, at);
-        filename = "pRc_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(gammapbeta,2) + ".dat";
-        writeToFile(pRc, filename);
     }
     
     // nucleate bubbles
     vector<bubble> bubbles;
     int Ntry = 0;
-    while ((bubbles.size() < J/2.0 || bubbles.size() > 2.0*J) && Ntry < 100) {
+    while ((bubbles.size() < J/10.0 || bubbles.size() > 10.0*J) && Ntry < 100) {
         bubbles = nucleate(Gamma, x1, x2, Nn, taut, at, mt);
         cout << bubbles.size() << endl;
         Ntry++;
@@ -82,7 +75,7 @@ int main (int argc, char *argv[]) {
     
     // generate a list of k values in log scale
     double kmin = 1.0/L;
-    double kmax = 30.0*beta;
+    double kmax = 20.0*beta;
     double dlogk = (log(kmax) - log(kmin))/(1.0*(Nk-1));
     double k = kmin;
     vector<double> klist;
@@ -106,13 +99,13 @@ int main (int argc, char *argv[]) {
     vector<vector<vector<vector<vector<complex<double> > > > > > T(Nt, vector<vector<vector<vector<complex<double> > > > > (Nkhat, vector<vector<vector<complex<double> > > > (Nk, vector<vector<complex<double> > > (Na, vector<complex<double> > (6, zero)))));
     
     // file for collision times on the surface of the first bubble
-    filename = "B_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(gammapbeta,2) + "_j_" + to_string(index) + ".dat";
+    filename = "B_exp_" + to_string(expansion) + "_beta_" + to_string_prec(beta,2) + "_j_" + to_string(index) + ".dat";
     outfile.open(filename.c_str());
     
     // initialize binning of the collision radius
     const int Nbins = 1000;
-    const double Rcmax = 10.0/beta, acRcmax = 10.0/beta;
-    vector<double> Rcbins(Nbins, 0.0), acRcbins(Nbins, 0.0);
+    const double Rcmax = 10.0/beta;
+    vector<double> Rcbins(Nbins, 0.0);
     
     double tau, taun, tauc, t, tc, a, an, ac, H, Hc, R, dR, Rc, dA, theta, phi, K;
     complex<double> eikX;
@@ -159,9 +152,6 @@ int main (int argc, char *argv[]) {
             if (Rc < Rcmax) {
                 Rcbins[(int) floor(Nbins*Rc/Rcmax)] += 1.0;
             }
-            if (ac*Rc < acRcmax) {
-                acRcbins[(int) floor(Nbins*ac*Rc/acRcmax)] += 1.0;
-            }
                         
             // compute the contribution to the stress-energy tensor
             R = 0.0;
@@ -179,7 +169,7 @@ int main (int argc, char *argv[]) {
                     
                     // dA = dOmega (a R)^2/a
                     dA = 4.0*PI/(a*Ns)*pow(a*R,2.0);
-                                        
+                    
                     // K = gamma*sigma/DeltaV, solve dK/dR + 2 K/R (1 + 3/2 a R H) = a or 0
                     if (R < Rc) {
                         if (expansion == 0) {
@@ -198,7 +188,7 @@ int main (int argc, char *argv[]) {
                         }
                         F[0] = 0.0; // envelope approximation
                         F[1] = K; // bulk flow approximation
-                        F[2] = K*ac*Rc/(a*R); // extra a_c*R_c/a*R dissipation
+                        F[2] = K*Rc/R; // extra R_c/R dissipation
                     }
                     
                     for (int jk = 0; jk < Nk; jk++) {
@@ -219,17 +209,13 @@ int main (int argc, char *argv[]) {
     outfile.close();
     
     // output the R_c and a_c R_c distributions
-    ofstream outfileRc, outfileacRc;
-    filename = "Rc_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(gammapbeta,2) + "_j_" + to_string(index) + ".dat";
+    ofstream outfileRc;
+    filename = "Rc_exp_" + to_string(expansion) + "_beta_" + to_string_prec(beta,2) + "_j_" + to_string(index) + ".dat";
     outfileRc.open(filename.c_str());
-    filename = "acRc_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(gammapbeta,2) + "_j_" + to_string(index) + ".dat";
-    outfileacRc.open(filename.c_str());
     for (int jb = 0; jb < Nbins; jb++) {
         outfileRc << beta*jb*Rcmax/(1.0*Nbins) << "    " << Rcbins[jb] << endl;
-        outfileacRc << beta*jb*acRcmax/(1.0*Nbins) << "    " << acRcbins[jb] << endl;
     }
     outfileRc.close();
-    outfileacRc.close();
         
     // TT projection
     for (int jt = 0; jt < Nt; jt++) {
@@ -280,12 +266,12 @@ int main (int argc, char *argv[]) {
     Nt = jtu; // Nt to match the length of u and du vectors
     
     // file for the GW spectrum as a function of time
-    filename = "OmegaGW_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(gammapbeta,2) + "_j_" + to_string(index) + ".dat";
+    filename = "OmegaGW_exp_" + to_string(expansion) + "_beta_" + to_string_prec(beta,2) + "_j_" + to_string(index) + ".dat";
     ofstream outfileOmega;
     outfileOmega.open(filename.c_str());
     
     // file for the total GW abundance as a function of time
-    filename = "OmegaTotGW_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(gammapbeta,2) + "_j_" + to_string(index) + ".dat";
+    filename = "OmegaTotGW_exp_" + to_string(expansion) + "_beta_" + to_string_prec(beta,2) + "_j_" + to_string(index) + ".dat";
     ofstream outfileOmegaTot;
     outfileOmegaTot.open(filename.c_str());
     
@@ -300,10 +286,10 @@ int main (int argc, char *argv[]) {
         t = at[2*jt][0];
         a = at[2*jt][1];
         H = Ht[2*jt][1];
-        if (expansion > 0) {
-            Theta = dtheta*3.0*pow(1.0/H,2.0)/(16.0*pow(PI*L,3.0));
-        } else {
+        if (expansion == 0) {
             Theta = dtheta*3.0/(16.0*pow(PI*L,3.0));
+        } else {
+            Theta = dtheta*3.0*pow(1.0/H,2.0)/(16.0*pow(PI*L,3.0));
         }
         
         OmegaTot = zeroNa;
@@ -340,17 +326,17 @@ int main (int argc, char *argv[]) {
     outfileOmegaTot.close();
     
     // file for the final GW spectrum
-    filename = "OmegaGWfin_beta_" + to_string_prec(beta,2) + "_gammaperbeta_" + to_string_prec(gammapbeta,2) + "_j_" + to_string(index) + ".dat";
+    filename = "OmegaGWfin_exp_" + to_string(expansion) + "_beta_" + to_string_prec(beta,2) + "_j_" + to_string(index) + ".dat";
     ofstream outfileOmegafin;
     outfileOmegafin.open(filename.c_str());
     
     // output the final GW spectrum
     a = at[2*(Nt-1)][1];
     H = Ht[2*(Nt-1)][1];
-    if (expansion > 0) {
-        Theta = dtheta*3.0*pow(1.0/H,2.0)/(16.0*pow(PI*L,3.0));
-    } else {
+    if (expansion == 0) {
         Theta = dtheta*3.0/(16.0*pow(PI*L,3.0));
+    } else {
+        Theta = dtheta*3.0*pow(1.0/H,2.0)/(16.0*pow(PI*L,3.0));
     }
     for (int jk = 0; jk < Nk; jk++) {
         k = klist[jk];
