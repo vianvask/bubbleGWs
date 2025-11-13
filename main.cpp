@@ -98,7 +98,7 @@ int main (int argc, char *argv[]) {
     int Na = 3; // envelope, bulk flow, extra R_c/R dissipation
     vector<vector<vector<vector<vector<complex<double> > > > > > T(Nt, vector<vector<vector<vector<complex<double> > > > > (Nkhat, vector<vector<vector<complex<double> > > > (Nk, vector<vector<complex<double> > > (Na, vector<complex<double> > (6, zero)))));
     
-    // file for collision times on the surface of the first bubble
+    // file for collision radii on the surface of the first bubble
     filename = "B_exp_" + to_string(expansion) + "_beta_" + to_string_prec(beta,2) + "_j_" + to_string(index) + ".dat";
     outfile.open(filename.c_str());
     
@@ -208,7 +208,7 @@ int main (int argc, char *argv[]) {
     }
     outfile.close();
     
-    // output the R_c and a_c R_c distributions
+    // output the R_c distribution
     filename = "Rc_exp_" + to_string(expansion) + "_beta_" + to_string_prec(beta,2) + "_j_" + to_string(index) + ".dat";
     outfile.open(filename.c_str());
     for (int jb = 0; jb < Nbins; jb++) {
