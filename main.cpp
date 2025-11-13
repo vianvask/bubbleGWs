@@ -4,8 +4,8 @@ int main (int argc, char *argv[]) {
     cout << setprecision(5) << fixed;
     clock_t time_req = clock(); // timing
     
-    const double beta = atof(argv[1]);
-    const int index = atoi(argv[2]);
+    const double beta = atof(argv[1]); // Gamma = H_0 e^(beta t)
+    const int index = atoi(argv[2]); // indexing output files
     const int expansion = atoi(argv[3]); // 0: static Minkowski space, 1: FLRW space
 
     rgen mt(time(NULL)+(index+1)+beta); // random number generator
@@ -23,10 +23,10 @@ int main (int argc, char *argv[]) {
     int Nt = 5000; // #timesteps
     int Nk = 50; // #k values
     
-    int J = 100; // bar{N}(t=t_max) = J, fixes L
-    double barNtmin = 0.0001; // bar{N}(t=t_min) = barNtmin, fixes t_min
-    double ftmax = 50.0; // t_max = t_p + ftmax*<R>
-    double Fmin = 0.0001; // bar{F}(t=t_max,nuc) = barFtmaxnuc, fixes t_max,nuc
+    int J = 120; // bar{N}(t=t_max) = J, fixes L
+    double barNtmin = 0.001; // bar{N}(t=t_min) = barNtmin, fixes t_min
+    double ftmax = 40.0; // t_max = t_p + ftmax*<R>
+    double Fmin = 0.001; // bar{F}(t=t_max,nuc) = barFtmaxnuc, fixes t_max,nuc
     
     // determine the time range and simulation volume
     vector<double> trange = findtrange(Gamma, barNtmin, J, ftmax, Fmin, expansion);
@@ -58,10 +58,10 @@ int main (int argc, char *argv[]) {
         writeToFile(Ht, filename);
     }
     
-    // nucleate bubbles
+    // nucleate bubbles, consider only realizations with #bubbles ≈ J
     vector<bubble> bubbles;
     int Ntry = 0;
-    while ((bubbles.size() < J/10.0 || bubbles.size() > 10.0*J) && Ntry < 100) {
+    while ((bubbles.size() < 0.8*J || bubbles.size() > 1.2*J) && Ntry < 100) {
         bubbles = nucleate(Gamma, x1, x2, Nn, taut, at, mt);
         cout << bubbles.size() << endl;
         Ntry++;
@@ -74,7 +74,7 @@ int main (int argc, char *argv[]) {
     double taumax = taut[taut.size()-1][1];
     
     // generate a list of k values in log scale
-    double kmin = 1.0/L;
+    double kmin = 2.0*PI/(4.0*L);
     double kmax = 20.0*beta;
     double dlogk = (log(kmax) - log(kmin))/(1.0*(Nk-1));
     double k = kmin;
@@ -94,8 +94,8 @@ int main (int argc, char *argv[]) {
         }
     }
     
-    // initialize T_ij: Nt timesteps, 6 k directions, Nk k values, Na approximations, 6 ij components
-    int Na = 3;
+    // initialize T_ij: Nt timesteps, 3 k directions, Nk k values, Na approximations, 6 ij components
+    int Na = 3; // envelope, bulk flow, extra R_c/R dissipation
     vector<vector<vector<vector<vector<complex<double> > > > > > T(Nt, vector<vector<vector<vector<complex<double> > > > > (Nkhat, vector<vector<vector<complex<double> > > > (Nk, vector<vector<complex<double> > > (Na, vector<complex<double> > (6, zero)))));
     
     // file for collision times on the surface of the first bubble
@@ -152,7 +152,7 @@ int main (int argc, char *argv[]) {
             if (Rc < Rcmax) {
                 Rcbins[(int) floor(Nbins*Rc/Rcmax)] += 1.0;
             }
-                        
+            
             // compute the contribution to the stress-energy tensor
             R = 0.0;
             K = 0.0;
@@ -209,13 +209,12 @@ int main (int argc, char *argv[]) {
     outfile.close();
     
     // output the R_c and a_c R_c distributions
-    ofstream outfileRc;
     filename = "Rc_exp_" + to_string(expansion) + "_beta_" + to_string_prec(beta,2) + "_j_" + to_string(index) + ".dat";
-    outfileRc.open(filename.c_str());
+    outfile.open(filename.c_str());
     for (int jb = 0; jb < Nbins; jb++) {
-        outfileRc << beta*jb*Rcmax/(1.0*Nbins) << "    " << Rcbins[jb] << endl;
+        outfile << beta*jb*Rcmax/(1.0*Nbins) << "    " << Rcbins[jb] << endl;
     }
-    outfileRc.close();
+    outfile.close();
         
     // TT projection
     for (int jt = 0; jt < Nt; jt++) {
@@ -265,23 +264,18 @@ int main (int argc, char *argv[]) {
     }
     Nt = jtu; // Nt to match the length of u and du vectors
     
-    // file for the GW spectrum as a function of time
-    filename = "OmegaGW_exp_" + to_string(expansion) + "_beta_" + to_string_prec(beta,2) + "_j_" + to_string(index) + ".dat";
-    ofstream outfileOmega;
-    outfileOmega.open(filename.c_str());
-    
     // file for the total GW abundance as a function of time
     filename = "OmegaTotGW_exp_" + to_string(expansion) + "_beta_" + to_string_prec(beta,2) + "_j_" + to_string(index) + ".dat";
-    ofstream outfileOmegaTot;
-    outfileOmegaTot.open(filename.c_str());
+    outfile.open(filename.c_str());
     
-    const vector<double> zeroNa(Na, 0.0);
     const vector<double> j6coef {1.0, 2.0, 2.0, 1.0, 2.0, 1.0};
     complex<double> u0, du0;
     double Theta, dtheta = 4.0*PI/Nkhat;
+    
+    const vector<double> zeroNa(Na, 0.0);
     vector<double> Omega(Na), OmegaTot(Na);
     
-    // output the GW spectrum and the total GW energy density as a function of time
+    // output the total GW energy density as a function of time
     for (int jt = 0; jt < Nt; jt++) {
         t = at[2*jt][0];
         a = at[2*jt][1];
@@ -293,42 +287,44 @@ int main (int argc, char *argv[]) {
         }
         
         OmegaTot = zeroNa;
+        // integrate over k amplitudes
         for (int jk = 0; jk < Nk; jk++) {
             k = klist[jk];
-            outfileOmega << t << "   " << k/beta << "    ";
             
             Omega = zeroNa;
             for (int ja = 0; ja < Na; ja++) {
+                
                 // integrate over k directions
                 for (int jd = 0; jd < Nkhat; jd++) {
+                    
                     // sum over components of u
                     for (int j6 = 0; j6 < 6; j6++) {
                         du0 = du[jt][jd][jk][ja][j6];
                         Omega[ja] += pow(k,3.0)*Theta*j6coef[j6]*pow(abs(du0),2.0);
                     }
                 }
-                outfileOmega <<  Omega[ja] << "    ";
                 
-                // integrated over k to get total Omega
-                OmegaTot[ja] += dlogk*Omega[ja];
+                // trapozoidal rule
+                if (jk == 0 || jk == Nk-1) {
+                    OmegaTot[ja] += dlogk*Omega[ja]/2.0;
+                } else {
+                    OmegaTot[ja] += dlogk*Omega[ja];
+                }
             }
-            outfileOmega << endl;
         }
         
-        // output total Omega
-        outfileOmegaTot << t << "    " << a << "    ";
+        // write the total Omega in file
+        outfile << t << "    " << a << "    ";
         for (int ja = 0; ja < Na; ja++) {
-            outfileOmegaTot <<  OmegaTot[ja] << "    ";
+            outfile <<  OmegaTot[ja] << "    ";
         }
-        outfileOmegaTot << endl;
+        outfile << endl;
     }
-    outfileOmega.close();
-    outfileOmegaTot.close();
+    outfile.close();
     
     // file for the final GW spectrum
     filename = "OmegaGWfin_exp_" + to_string(expansion) + "_beta_" + to_string_prec(beta,2) + "_j_" + to_string(index) + ".dat";
-    ofstream outfileOmegafin;
-    outfileOmegafin.open(filename.c_str());
+    outfile.open(filename.c_str());
     
     // output the final GW spectrum
     a = at[2*(Nt-1)][1];
@@ -340,9 +336,14 @@ int main (int argc, char *argv[]) {
     }
     for (int jk = 0; jk < Nk; jk++) {
         k = klist[jk];
+        
         Omega = zeroNa;
         for (int ja = 0; ja < Na; ja++) {
+            
+            // integrate over k directions
             for (int jd = 0; jd < Nkhat; jd++) {
+                
+                // sum over components of u
                 for (int j6 = 0; j6 < 6; j6++) {
                     u0 = u[Nt-1][jd][jk][ja][j6];
                     du0 = du[Nt-1][jd][jk][ja][j6];
@@ -350,9 +351,15 @@ int main (int argc, char *argv[]) {
                 }
             }
         }
-        outfileOmegafin << k/beta << "    " << Omega[0] << "    " << Omega[1] << "    " << Omega[2] << endl;
+        
+        // write the spectrum in a file
+        outfile << k/beta << "    ";
+        for (int ja = 0; ja < Na; ja++) {
+            outfile <<  Omega[ja] << "    ";
+        }
+        outfile << endl;
     }
-    outfileOmegafin.close();
+    outfile.close();
     
     time_req = clock() - time_req;
     cout << "total evaluation time: " << ((double) time_req/CLOCKS_PER_SEC/60.0) << " minutes." << endl;

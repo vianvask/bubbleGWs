@@ -17,11 +17,6 @@ int sgn(const double a) {
     return (0.0 < a) - (a < 0.0);
 }
 
-// modulo of integers
-int imod(int i, int n) {
-    return (i % n + n) % n;
-}
-
 // bubble radius as a function of conformal time
 double radius(double tau, double taun) {
     double R = -1.0;

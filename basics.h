@@ -12,7 +12,7 @@ using namespace std;
 typedef mt19937_64 rgen;
 
 const double PI = 3.141592653589793238463;
-const double beta = 1.0;
+
 const complex<double> I(0.0, 1.0);
 const complex<double> zero(0.0, 0.0);
 
@@ -27,7 +27,6 @@ string to_string_prec(const double a, const int n);
 
 int delta(int i, int j);
 int sgn(double a);
-int imod(int i, int n);
 
 double radius(double tau, double taun);
 double randomreal(double x1, double x2, rgen &mt);
