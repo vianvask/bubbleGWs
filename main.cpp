@@ -281,9 +281,9 @@ int main (int argc, char *argv[]) {
         a = at[2*jt][1];
         H = Ht[2*jt][1];
         if (expansion == 0) {
-            Theta = dtheta*3.0/(16.0*pow(PI*L,3.0));
+            Theta = dtheta*3.0/(8.0*pow(PI*L,3.0));
         } else {
-            Theta = dtheta*3.0*pow(1.0/H,2.0)/(16.0*pow(PI*L,3.0));
+            Theta = dtheta*3.0*pow(1.0/H,2.0)/(8.0*pow(PI*L,3.0));
         }
         
         OmegaTot = zeroNa;
@@ -347,7 +347,7 @@ int main (int argc, char *argv[]) {
                 for (int j6 = 0; j6 < 6; j6++) {
                     u0 = u[Nt-1][jd][jk][ja][j6];
                     du0 = du[Nt-1][jd][jk][ja][j6];
-                    Omega[ja] += pow(k,3.0)*Theta*j6coef[j6]*(pow(abs(du0 + H*u0),2.0) + pow(abs(k*u0/a),2.0))/2.0;
+                    Omega[ja] += pow(k,3.0)*Theta*j6coef[j6]*(pow(abs(du0 + H*u0),2.0) + pow(abs(k*u0/a),2.0));
                 }
             }
         }
